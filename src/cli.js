@@ -468,7 +468,6 @@ function printGeneralHelp(logger) {
       "  npx mdmm@latest init",
       "  npx mdmm@latest check",
       "  npm i -g mdmm && mdmm build",
-      "  npm i -D mdmm && npx mdmm build",
       "",
       "Command model:",
       "  init   scaffold a new docs project",

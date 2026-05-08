@@ -1,30 +1,40 @@
-# MDMM: Mermaid Include в Markdown-документации
+# MDMM: Mermaid Include for Markdown Documentation
 
-`mdmm` — CLI-инструмент для переиспользования Mermaid-диаграмм и Mermaid-фрагментов в Markdown-документах. С его помощью общие схемы и фрагменты можно описать один раз, затем подключать в нужных местах и на выходе получать обычный Markdown с обычными `mermaid`-блоками.
+---
 
-Инструмент построен вокруг простого принципа: автор продолжает работать в привычных `Markdown + Mermaid`, без отдельного DSL, JSON или YAML. `mdmm` добавляет только минимальный синтаксис для подключения общих блоков, фрагментов и шаблонов, а проверку ссылок, подстановку аргументов и сборку итогового документа берет на себя.
+[по-русски](./README.RU.md) | [in english](./README.md)
 
-Это упрощает сопровождение документации: повторяющиеся схемы не копируются вручную, изменения вносятся в одном месте, а результат сборки остается готовым к публикации и понятным любому, кто работает с обычным Markdown.
+---
 
-## Оглавление
 
-- [Быстрый старт](#быстрый-старт)
-- [Конфиг проекта](#конфиг-проекта)
-- [Рабочий сценарий](#рабочий-сценарий)
-- [Внутренний язык MDMM](#внутренний-язык-mdmm):
-  - [Объявление переиспользуемой диаграммы](#1-объявление-переиспользуемой-диаграммы)
-  - [Вставка целой диаграммы](#2-вставка-целой-диаграммы)
-  - [Объявление и вставка фрагмента](#3-объявление-и-вставка-фрагмента)
-  - [Шаблонные аргументы](#4-шаблонные-аргументы)
-  - [Вложенные шаблоны и ссылки](#5-вложенные-шаблоны-и-ссылки)
-  - [Короткие и явные ссылки](#6-короткие-и-явные-ссылки)
-  - [Рекомендации по авторскому языку](#7-рекомендации-по-авторскому-языку)
-- [Команды CLI](#команды-cli)
-- [Сводная таблица значений по умолчанию](#сводная-таблица-значений-по-умолчанию)
-- [Ограничения текущей версии](#ограничения-текущей-версии)
+`mdmm` is a CLI tool for reusing Mermaid diagrams and Mermaid fragments in Markdown documents. It lets you define shared diagrams and fragments once, include them where needed, and generate plain Markdown with standard `mermaid` blocks as output.
+
+The tool follows a simple idea: authors keep working in familiar `Markdown + Mermaid`, without a separate DSL, JSON, or YAML. `mdmm` only adds a minimal syntax for including shared blocks, fragments, and templates, while handling reference validation, argument substitution, and final document assembly.
+
+This makes documentation easier to maintain: repeated diagrams do not need to be copied by hand, updates happen in one place, and the final output stays ready for publication and easy to read for anyone working with plain Markdown.
+
+## Table Of Contents
+
+- [Quick Start](#quick-start)
+- [How It Works](#how-it-works)
+- [Installation And Usage](#installation-and-usage)
+- [New Project](#new-project)
+- [Project Config](#project-config)
+- [Workflow](#workflow)
+- [The MDMM Authoring Language](#the-mdmm-authoring-language)
+  - [Declaring A Reusable Diagram](#1-declaring-a-reusable-diagram)
+  - [Including A Diagram](#2-including-a-diagram)
+  - [Declaring And Including A Fragment](#3-declaring-and-including-a-fragment)
+  - [Template Arguments](#4-template-arguments)
+  - [Nested Templates And References](#5-nested-templates-and-references)
+  - [Short And Explicit References](#6-short-and-explicit-references)
+  - [Authoring Recommendations](#7-authoring-recommendations)
+- [CLI Commands](#cli-commands)
+- [Default Values Summary](#default-values-summary)
+- [Current Limitations](#current-limitations)
 - [FAQ](#faq)
 
-## Быстрый старт
+## Quick Start
 
 ```bash
 npx mdmm
@@ -34,25 +44,26 @@ npx mdmm
 npx mdmm init
 ```
 
-После `init` у вас появится базовая структура проекта, пример общей диаграммы и стартовый документ.
+After `init`, you get a basic project structure, a sample shared diagram, and a starter document.
 
-## Как это работает
+## How It Works
 
-1. Вы храните общие Mermaid-блоки в библиотеке.
-2. В рабочих документах подключаете их через `mdmm`-директивы.
-3. `mdmm check` проверяет ссылки, аргументы шаблонов и правила языка.
-4. `mdmm build` разворачивает все вставки и готовит итоговый Markdown.
-5. На выходе остаются обычные `mermaid`-блоки, пригодные для публикации.
+1. Store shared Mermaid blocks in a library.
+2. Include them from working documents through `mdmm` directives.
+3. Run `mdmm check` to validate references, template arguments, and language rules.
+4. Run `mdmm build` to expand all includes and produce final Markdown.
+5. The output contains plain `mermaid` blocks ready for publication.
 
-## Установка И Запуск
+## Installation And Usage
 
-| Сценарий | Команда | Когда подходит |
+Requirement: `Node.js 22` or newer.
+
+| Scenario | Command | When it fits |
 | --- | --- | --- |
-| Без установки | `npx mdmm@latest ...` | если нужно быстро попробовать инструмент или выполнить разовую сборку |
-| Глобальная установка | `npm i -g mdmm` | если вы часто работаете с документацией на этой машине |
+| No installation | `npx mdmm@latest ...` | when you want to try the tool quickly or run a one-off build |
+| Global install | `npm i -g mdmm` | when you work with documentation on this machine regularly |
 
-
-Примеры:
+Examples:
 
 ```bash
 npx mdmm@latest --help
@@ -67,15 +78,15 @@ mdmm check
 mdmm build
 ```
 
-## Новый Проект
+## New Project
 
-Команда `mdmm init` создает новую структуру документационного проекта.
+The `mdmm init` command creates a new documentation project structure.
 
 ```bash
 mdmm init
 ```
 
-По умолчанию она создает:
+By default it creates:
 
 ```text
 .
@@ -87,31 +98,31 @@ mdmm init
 `- mdmm.config.json
 ```
 
-Если файл `mdmm.config.json` или стартовые файлы уже существуют, `init` не будет их перезаписывать без явного флага `--force`.
+If `mdmm.config.json` or starter files already exist, `init` will not overwrite them unless you pass `--force` explicitly.
 
-### Параметры `init`
+### Parameters For `init`
 
-| Параметр | По умолчанию | Что делает |
+| Parameter | Default | What it does |
 | --- | --- | --- |
-| `--yes` | выключен | принимает стандартные значения без интерактивных вопросов |
-| `--force` | выключен | разрешает перезапись файлов, которые создает `init` |
-| `--no-starter` | выключен | создает только структуру каталогов и конфиг, без стартовых Markdown-файлов |
+| `--yes` | off | accepts default values without interactive prompts |
+| `--force` | off | allows overwriting files created by `init` |
+| `--no-starter` | off | creates only directories and config, without starter Markdown files |
 
-### Поведение `init` по умолчанию
+### Default `init` Behavior
 
-| Что настраивается | Значение по умолчанию |
+| What is configured | Default value |
 | --- | --- |
-| Каталог документов | `docs/` |
-| Каталог общей библиотеки | `shared/` |
-| Каталог результата сборки | `dist/` |
+| Documents directory | `docs/` |
+| Shared library directory | `shared/` |
+| Build output directory | `dist/` |
 
-Если команда запускается в неинтерактивной среде, используйте `--yes`.
+If the command runs in a non-interactive environment, use `--yes`.
 
-## Конфиг Проекта
+## Project Config
 
-`mdmm` может работать вообще без конфига, но для регулярной работы удобнее добавить `mdmm.config.json` в корень проекта.
+`mdmm` can work without a config file, but for regular use it is more convenient to add `mdmm.config.json` at the project root.
 
-Пример:
+Example:
 
 ```json
 {
@@ -121,51 +132,51 @@ mdmm init
 }
 ```
 
-Все поля необязательны.
+All fields are optional.
 
-### Поля конфига
+### Config Fields
 
-| Поле | Значение по умолчанию | Что означает |
+| Field | Default value | Meaning |
 | --- | --- | --- |
-| `docsDir` | `docs` | где лежат исходные Markdown-документы |
-| `sharedDir` | `shared` | где лежит библиотека переиспользуемых Mermaid-блоков |
-| `outputDir` | `dist` | куда писать результат сборки для каталога |
+| `docsDir` | `docs` | where source Markdown documents live |
+| `sharedDir` | `shared` | where the reusable Mermaid library lives |
+| `outputDir` | `dist` | where directory build output is written |
 
-## Рабочий Сценарий
+## Workflow
 
-Обычный поток работы выглядит так:
+A typical workflow looks like this:
 
-1. Положите общие диаграммы и фрагменты в `shared/`.
-2. Пишите пользовательские документы в `docs/`.
-3. Подключайте нужные блоки через `mdmm`-директивы.
-4. Запускайте `mdmm check`, чтобы быстро проверить корректность ссылок и шаблонов.
-5. Запускайте `mdmm build`, чтобы получить итоговый Markdown для публикации.
-6. При необходимости используйте `mdmm report`, чтобы увидеть, где и что переиспользуется.
+1. Put shared diagrams and fragments into `shared/`.
+2. Write user-facing documents in `docs/`.
+3. Include the blocks you need through `mdmm` directives.
+4. Run `mdmm check` for a fast validation of references and templates.
+5. Run `mdmm build` to generate final Markdown for publication.
+6. Use `mdmm report` when you need to see what is reused and where.
 
-## Внутренний Язык MDMM
+## The MDMM Authoring Language
 
-`mdmm` добавляет к обычному Markdown минимальный набор конструкций. Они нужны только для повторного использования Mermaid-контента.
+`mdmm` adds a minimal set of constructs on top of plain Markdown. They exist only to support Mermaid content reuse.
 
-### 1. Объявление переиспользуемой диаграммы
+### 1. Declaring A Reusable Diagram
 
-Диаграмма объявляется в HTML-комментариях `mermaid:block`.
+A reusable diagram is declared with `mermaid:block` HTML comments.
 
 ````md
 <!-- mermaid:block customer-verification.overview -->
 ```mermaid
 flowchart TD
-Start[Получить документы] --> Review{Документы валидны?}
-Review -- Да --> Approve[Одобрить клиента]
-Review -- Нет --> Fix[Запросить исправления]
+Start[Receive documents] --> Review{Documents valid?}
+Review -- Yes --> Approve[Approve customer]
+Review -- No --> Fix[Request corrections]
 ```
 <!-- /mermaid:block -->
 ````
 
-Такой блок потом можно подключать в других документах через `mermaid-include`.
+That block can later be included from other documents through `mermaid-include`.
 
-### 2. Вставка целой диаграммы
+### 2. Including A Diagram
 
-Самый простой способ подключить общий блок:
+The simplest way to include a shared block is:
 
 ````md
 ```mermaid-include
@@ -173,9 +184,9 @@ customer-verification.overview
 ```
 ````
 
-Такой вариант называется короткой ссылкой.
+This form is called a short reference.
 
-Если нужно явно указать файл:
+If you want to point to a specific file explicitly:
 
 ````md
 ```mermaid-include
@@ -183,27 +194,27 @@ customer-verification.overview
 ```
 ````
 
-После сборки конструкция `mermaid-include` заменяется обычным `mermaid`-блоком.
+After the build, the `mermaid-include` block is replaced with a standard `mermaid` block.
 
-### 3. Объявление и вставка фрагмента
+### 3. Declaring And Including A Fragment
 
-Фрагмент полезен, когда внутрь одной большой диаграммы нужно вставить типовой подпроцесс.
+A fragment is useful when you need to insert a standard subprocess into a larger diagram.
 
-Фрагмент объявляется отдельной конструкцией `mermaid:fragment`.
+A fragment is declared with a dedicated `mermaid:fragment` construct.
 
 ````md
 <!-- mermaid:fragment verification exports=entry,success,fail -->
 ```mermaid
 flowchart TD
-entry[Начать проверку]
-entry --> check{Документы валидны?}
-check -- Да --> success[Проверка пройдена]
-check -- Нет --> fail[Нужны исправления]
+entry[Start verification]
+entry --> check{Documents valid?}
+check -- Yes --> success[Verification passed]
+check -- No --> fail[Corrections required]
 ```
 <!-- /mermaid:fragment -->
 ````
 
-Подключение фрагмента внутрь диаграммы:
+Including a fragment inside a diagram:
 
 ````md
 ```mermaid
@@ -214,7 +225,7 @@ kyc__success --> Done
 ```
 ````
 
-Подключение по явному пути:
+Including it by explicit path:
 
 ````md
 ```mermaid
@@ -225,105 +236,105 @@ kyc__success --> Done
 ```
 ````
 
-Что важно знать про фрагменты:
+Important fragment rules:
 
-- фрагмент объявляется через `mermaid:fragment ...`;
-- у фрагмента обязательно должен быть `alias` через `as ...`;
-- имя фрагмента может быть коротким, без суффикса `.fragment`;
-- `mdmm` автоматически переписывает внутренние идентификаторы узлов в формат `<alias>__<node-id>`;
-- снаружи можно ссылаться только на узлы, перечисленные в `exports`;
-- первая строка с типом диаграммы внутри фрагмента сохраняется для автора, но не вставляется внутрь внешней диаграммы.
+- fragments are declared through `mermaid:fragment ...`;
+- every fragment include must define an `alias` through `as ...`;
+- fragment names can be short and do not need a `.fragment` suffix;
+- `mdmm` automatically rewrites internal node ids into `<alias>__<node-id>`;
+- from outside, you can reference only the nodes listed in `exports`;
+- the first line with the diagram type is kept for the author but is not inserted into the outer diagram.
 
-### 4. Шаблонные аргументы
+### 4. Template Arguments
 
-В диаграммах и фрагментах можно использовать простые параметры.
+Both diagrams and fragments can use simple parameters.
 
-Пример шаблона:
+Example template:
 
 ````md
 <!-- mermaid:block approval.overview -->
 ```mermaid
 flowchart TD
-start([Старт]) --> owner["%owner%"]
-owner --> review{"Согласование: %reviewer|Финансы%"}
-review -->|Эскалация| escalator["%escalator|Руководитель функции%"]
+start([Start]) --> owner["%owner%"]
+owner --> review{"Approval: %reviewer|Finance%"}
+review -->|Escalate| escalator["%escalator|Function head%"]
 ```
 <!-- /mermaid:block -->
 ````
 
-Пример шаблонного фрагмента:
+Example templated fragment:
 
 ````md
 <!-- mermaid:fragment approval exports=entry,done -->
 ```mermaid
 flowchart TD
 entry["%owner%"]
-entry --> done["Согласует: %reviewer|Финансы%"]
+entry --> done["Approved by: %reviewer|Finance%"]
 ```
 <!-- /mermaid:fragment -->
 ````
 
-### Формы подстановки
+### Placeholder Forms
 
-| Форма | Что означает | Поведение по умолчанию |
+| Form | Meaning | Default behavior |
 | --- | --- | --- |
-| `%name%` | обязательный аргумент | если аргумент не передан, команда завершится ошибкой |
-| `%name\|Текст%` | аргумент со значением по умолчанию | если аргумент не передан, будет использован текст после `\|` |
+| `%name%` | required argument | if the argument is not passed, the command fails |
+| `%name\|Text%` | argument with a default value | if the argument is not passed, the text after `\|` is used |
 
-Компактная однострочная форма для диаграммы:
+Compact one-line form for a diagram:
 
 ````md
 ```mermaid-include
-approval.overview owner="Риск-офис" reviewer=Юристы
+approval.overview owner="Risk office" reviewer=Legal
 ```
 ````
 
-Многострочная форма для диаграммы:
+Multi-line form for a diagram:
 
 ````md
 ```mermaid-include
 approval.overview
-owner = Операционный блок
-escalator = Руководитель направления
+owner = Operations
+escalator = Department head
 ```
 ````
 
-Компактная форма для фрагмента:
+Compact form for a fragment:
 
 ````md
 ```mermaid
 flowchart LR
 Start --> lane__entry
-%% include: approval as lane owner="Риск-офис" reviewer=Юристы
+%% include: approval as lane owner="Risk office" reviewer=Legal
 lane__done --> End
 ```
 ````
 
-Многострочная форма для фрагмента:
+Multi-line form for a fragment:
 
 ````md
 ```mermaid
 flowchart LR
 Start --> lane__entry
 %% include: approval as lane
-%% owner = Операционный блок
-%% reviewer = Финансы
+%% owner = Operations
+%% reviewer = Finance
 lane__done --> End
 ```
 ````
 
-Правила шаблонов:
+Template rules:
 
-- неизвестный аргумент вызывает ошибку;
-- пропущенный обязательный аргумент вызывает ошибку;
-- повторное объявление одного и того же аргумента вызывает ошибку;
-- значения с пробелами в однострочной форме нужно брать в кавычки.
+- an unknown argument causes an error;
+- a missing required argument causes an error;
+- redeclaring the same argument causes an error;
+- in one-line form, values with spaces must be quoted.
 
-### 5. Вложенные шаблоны и ссылки
+### 5. Nested Templates And References
 
-Шаблон может подключать другой шаблон или фрагмент.
+A template can include another template or fragment.
 
-Пример:
+Example:
 
 ````md
 <!-- mermaid:block review.wrapper -->
@@ -331,54 +342,54 @@ lane__done --> End
 flowchart LR
 Start --> lane__entry
 %% include: %fragmentRef|review% as lane
-%% reviewer = %reviewer|Финансы%
+%% reviewer = %reviewer|Finance%
 lane__done --> End
 ```
 <!-- /mermaid:block -->
 ````
 
-Вызов:
+Call site:
 
 ````md
 ```mermaid-include
-review.wrapper fragmentRef=audit reviewer=Юристы
+review.wrapper fragmentRef=audit reviewer=Legal
 ```
 ````
 
-Вызов с явным путем:
+Call site with an explicit path:
 
 ````md
 ```mermaid-include
-review.wrapper fragmentRef=../shared/library.md#audit reviewer=Юристы
+review.wrapper fragmentRef=../shared/library.md#audit reviewer=Legal
 ```
 ````
 
-Правило разрешения путей во вложенных шаблонах:
+Path resolution rules in nested templates:
 
-- если относительный путь передан явно как аргумент шаблона, он трактуется относительно документа, который вызывает шаблон;
-- если относительный путь указан как значение по умолчанию внутри самого шаблона, он трактуется относительно файла шаблона.
+- if a relative path is passed explicitly as a template argument, it is resolved relative to the document that calls the template;
+- if a relative path is defined as a default value inside the template itself, it is resolved relative to the template file.
 
-### 6. Короткие и явные ссылки
+### 6. Short And Explicit References
 
-| Форма ссылки | Пример | Где ищется |
+| Reference form | Example | Where it is resolved |
 | --- | --- | --- |
-| Короткая | `customer-verification.overview` | во всех `.md`-файлах внутри `sharedDir`, рекурсивно |
-| Явная | `../shared/customer-verification.md#customer-verification.overview` | путь считается относительно текущего документа |
+| Short | `customer-verification.overview` | across all `.md` files inside `sharedDir`, recursively |
+| Explicit | `../shared/customer-verification.md#customer-verification.overview` | the path is resolved relative to the current document |
 
-Короткие ссылки удобнее для повседневной работы. `mdmm` ищет их по `block id` во всем дереве `sharedDir`, поэтому такой идентификатор должен быть уникален в общей библиотеке. Явные ссылки полезны, когда нужно однозначно указать конкретный файл.
+Short references are more convenient for daily work. `mdmm` resolves them by `block id` across the entire `sharedDir` tree, so the identifier must be unique within the shared library. Explicit references are useful when you need to point to a specific file unambiguously.
 
-### 7. Рекомендации по авторскому языку
+### 7. Authoring Recommendations
 
-- используйте шаблонные параметры в подписях, комментариях и значениях аргументов;
-- не используйте `%...%` в идентификаторах узлов, `alias` и строке типа диаграммы;
-- давайте блокам стабильные и понятные `block id`;
-- для фрагментов заранее продумывайте публичные точки входа и выхода через `exports`.
+- use template arguments in labels, comments, and argument values;
+- do not use `%...%` in node ids, `alias`, or the diagram type line;
+- give blocks stable and readable `block id` values;
+- for fragments, think through the public entry and exit points exposed through `exports`.
 
-## Команды CLI
+## CLI Commands
 
-### Общие команды и глобальные опции
+### General Commands And Global Options
 
-Если вызвать `mdmm` без команды, инструмент покажет справку и короткий путь старта.
+If you run `mdmm` without a command, it prints help and a short quick-start message.
 
 ```bash
 mdmm
@@ -386,81 +397,81 @@ mdmm --help
 mdmm --version
 ```
 
-У каждой команды есть собственная справка:
+Every command also has its own help:
 
 ```bash
 mdmm build --help
 mdmm check --help
 ```
 
-### Глобальные опции
+### Global Options
 
-| Опция | По умолчанию | Что делает |
+| Option | Default | What it does |
 | --- | --- | --- |
-| `--help`, `-h` | выключена | показывает общую справку |
-| `--version`, `-v` | выключена | показывает установленную версию `mdmm` |
-| `--no-color` | выключена | отключает цветной вывод |
-| `NO_COLOR` | не задана | если переменная окружения задана, цветной вывод отключается |
+| `--help`, `-h` | off | shows general help |
+| `--version`, `-v` | off | shows the installed `mdmm` version |
+| `--no-color` | off | disables colored output |
+| `NO_COLOR` | unset | if this environment variable is set, colored output is disabled |
 
-Цветной вывод включается автоматически только в терминале, который поддерживает TTY.
+Colored output is enabled automatically only in terminals with TTY support.
 
-## Команда `init`
+## Command `init`
 
-Синтаксис:
+Syntax:
 
 ```bash
 mdmm init [--yes] [--force] [--no-starter]
 ```
 
-Что делает команда:
+What the command does:
 
-- создает `mdmm.config.json`;
-- создает каталоги `docs/`, `shared/`, `dist/`;
-- при стандартном поведении добавляет стартовые Markdown-файлы.
+- creates `mdmm.config.json`;
+- creates `docs/`, `shared/`, and `dist/` directories;
+- in the default mode, adds starter Markdown files.
 
-### Параметры `init`
+### Parameters For `init`
 
-| Параметр | По умолчанию | Что делает |
+| Parameter | Default | What it does |
 | --- | --- | --- |
-| `--yes` | выключен | принимает стандартную структуру проекта без вопросов |
-| `--force` | выключен | разрешает перезапись файлов, которые создает `init` |
-| `--no-starter` | выключен | не создает `docs/index.md` и `shared/getting-started.md` |
+| `--yes` | off | accepts the default project structure without prompts |
+| `--force` | off | allows overwriting files created by `init` |
+| `--no-starter` | off | does not create `docs/index.md` or `shared/getting-started.md` |
 
-## Команда `check`
+## Command `check`
 
-Синтаксис:
+Syntax:
 
 ```bash
 mdmm check [<input.md|input-dir>] [--max-include-depth <n>]
 ```
 
-Когда использовать:
+When to use it:
 
-- когда нужно быстро проверить корректность ссылок;
-- когда вы редактировали шаблоны или фрагменты;
-- когда не нужен итоговый файл, а нужна только проверка.
+- when you want a fast validation of references;
+- when you edited templates or fragments;
+- when you do not need output files yet and only want validation.
 
-Что проверяет `check`:
+What `check` validates:
 
-- существование блоков и файлов;
-- корректность коротких и явных ссылок;
-- корректность `alias` и `exports`;
-- обязательные и неизвестные аргументы шаблонов;
-- глубину вложенных include.
+- that blocks and files exist;
+- that short and explicit references are valid;
+- that `alias` and `exports` are valid;
+- that required and unknown template arguments are handled correctly;
+- include nesting depth.
 
-Что `check` не делает:
+What `check` does not do:
 
-- не записывает файлы;
-- не выполняет финальную Mermaid-валидацию результата.
+- it does not write files;
+- it does not run final Mermaid validation on the rendered output.
 
-### Параметры `check`
+### Parameters For `check`
 
-| Параметр | По умолчанию | Что делает |
+| Parameter | Default | What it does |
 | --- | --- | --- |
-| `<input.md|input-dir>` | `docsDir` из конфига или `./docs` | задает файл или каталог для проверки |
-| `--max-include-depth <n>` | `5` | ограничивает глубину вложенных include |
+| `<input.md|input-dir>` | `docsDir` from config or `./docs` | sets the file or directory to validate |
+| `--max-include-depth <n>` | `5` | limits nested include depth |
 
-Примеры:
+Examples:
 
 ```bash
 mdmm check
@@ -469,55 +480,55 @@ mdmm check ./docs/customer-flow.md
 mdmm check ./docs --max-include-depth 8
 ```
 
-## Команда `build`
+## Command `build`
 
-Синтаксис:
+Syntax:
 
 ```bash
 mdmm build [<input.md|input-dir>] [--output <output-path>] [--max-include-depth <n>] [--no-validate]
 ```
 
-Когда использовать:
+When to use it:
 
-- когда нужен итоговый Markdown для публикации;
-- когда нужно развернуть все include в обычные Mermaid-блоки;
-- когда важно дополнительно проверить итоговый Mermaid-контент.
+- when you need final Markdown for publication;
+- when you want all includes expanded into standard Mermaid blocks;
+- when you want an additional validation pass on the final Mermaid content.
 
-Что делает `build`:
+What `build` does:
 
-- разворачивает diagram include и fragment include;
-- подставляет аргументы шаблонов;
-- по умолчанию валидирует итоговые Mermaid-блоки;
-- записывает результат в файл или каталог;
-- для каталога сохраняет относительную структуру файлов.
+- expands diagram includes and fragment includes;
+- substitutes template arguments;
+- validates final Mermaid blocks by default;
+- writes the result to a file or directory;
+- preserves relative file structure when building a directory.
 
-### Параметры `build`
+### Parameters For `build`
 
-| Параметр | По умолчанию | Что делает |
+| Parameter | Default | What it does |
 | --- | --- | --- |
-| `<input.md|input-dir>` | `docsDir` из конфига или `./docs` | задает файл или каталог для сборки |
-| `--output <output-path>` | зависит от режима | задает путь записи результата |
-| `--max-include-depth <n>` | `5` | ограничивает глубину вложенных include |
-| `--no-validate` | выключен | отключает финальную Mermaid-валидацию |
+| `<input.md|input-dir>` | `docsDir` from config or `./docs` | sets the file or directory to build |
+| `--output <output-path>` | depends on the mode | sets where the result is written |
+| `--max-include-depth <n>` | `5` | limits nested include depth |
+| `--no-validate` | off | disables final Mermaid validation |
 
-### Поведение `build` по умолчанию
+### Default `build` Behavior
 
-| Сценарий | Поведение |
+| Scenario | Behavior |
 | --- | --- |
-| Сборка одного файла без `--output` | результат печатается в стандартный вывод |
-| Сборка одного файла с `--output` | результат записывается в указанный файл |
-| Сборка каталога без `--output` | результат записывается в `outputDir` из конфига или в `./dist` |
-| Сборка каталога с `--output` | результат записывается в указанный каталог |
-| Валидация Mermaid | включена |
+| Building a single file without `--output` | prints the result to stdout |
+| Building a single file with `--output` | writes the result to the specified file |
+| Building a directory without `--output` | writes the result to `outputDir` from config or `./dist` |
+| Building a directory with `--output` | writes the result to the specified directory |
+| Mermaid validation | enabled |
 
-### Важные свойства `build`
+### Important `build` Properties
 
-- если итоговый Mermaid некорректен, команда завершится ошибкой;
-- при сборке каталога `mdmm` не записывает частичный результат: сначала проверяет все файлы, потом пишет выходные данные;
-- если на вход подан каталог, `mdmm` обрабатывает все `.md`-файлы рекурсивно;
-- если рекурсивно обрабатывается корень проекта, каталоги общей библиотеки и результата сборки пропускаются автоматически.
+- if the final Mermaid output is invalid, the command fails;
+- when building a directory, `mdmm` does not write partial output: it validates everything first and writes files only after the full run succeeds;
+- if the input is a directory, `mdmm` processes all `.md` files recursively;
+- if the recursive input is the project root, the shared library and build output directories are skipped automatically.
 
-Примеры:
+Examples:
 
 ```bash
 mdmm build
@@ -527,39 +538,39 @@ mdmm build ./docs/customer-flow.md --output ./dist/customer-flow.md
 mdmm build ./docs --no-validate
 ```
 
-## Команда `report`
+## Command `report`
 
-Синтаксис:
+Syntax:
 
 ```bash
 mdmm report [<input.md|input-dir>] [--output <report.json>]
 ```
 
-Когда использовать:
+When to use it:
 
-- когда нужно понять, какие общие блоки где используются;
-- когда вы чистите библиотеку диаграмм;
-- когда нужно оценить влияние изменений в общей схеме.
+- when you want to understand where shared blocks are used;
+- when you are cleaning up the diagram library;
+- when you need to estimate the impact of changing a shared diagram.
 
-Что попадает в отчет:
+What the report contains:
 
-- список обработанных Markdown-файлов;
-- зависимости каждого файла;
-- тип зависимости: `diagram` или `fragment`;
-- исходная ссылка автора;
-- целевой файл и `block id`;
-- `alias` для fragment include;
-- переданные аргументы шаблонов;
-- сводка по использованию блоков.
+- the list of processed Markdown files;
+- dependencies for each file;
+- dependency type: `diagram` or `fragment`;
+- the original author reference;
+- the target file and `block id`;
+- the `alias` for fragment includes;
+- passed template arguments;
+- a block usage summary.
 
-### Параметры `report`
+### Parameters For `report`
 
-| Параметр | По умолчанию | Что делает |
+| Parameter | Default | What it does |
 | --- | --- | --- |
-| `<input.md|input-dir>` | `docsDir` из конфига или `./docs` | задает файл или каталог для отчета |
-| `--output <report.json>` | стандартный вывод | записывает JSON-отчет в файл |
+| `<input.md|input-dir>` | `docsDir` from config or `./docs` | sets the file or directory for the report |
+| `--output <report.json>` | stdout | writes the JSON report to a file |
 
-Примеры:
+Examples:
 
 ```bash
 mdmm report
@@ -567,70 +578,70 @@ mdmm report ./docs --output ./dist/dependencies.json
 mdmm report ./docs/customer-flow.md
 ```
 
-## Команда `adopt`
+## Command `adopt`
 
-Синтаксис:
+Syntax:
 
 ```bash
 mdmm adopt
 ```
 
-Команда уже зарезервирована в CLI, но пока не выполняет автоматическую миграцию существующего проекта. Сейчас она выводит справочную подсказку и ничего не меняет в файлах.
+The command is already reserved in the CLI, but it does not yet perform an automatic migration for an existing project. Right now it prints guidance and does not change any files.
 
-Эта команда нужна для будущего сценария, когда в уже существующем наборе документов нужно будет найти повторяющиеся диаграммы и аккуратно подготовить проект к внедрению `mdmm`.
+It is intended for a future workflow where an existing documentation set needs repeated diagrams identified and the project prepared carefully for `mdmm` adoption.
 
-## Сводная Таблица Значений По Умолчанию
+## Default Values Summary
 
-| Область | Параметр | Значение по умолчанию |
+| Area | Parameter | Default value |
 | --- | --- | --- |
-| Объявление блока | `type` | `diagram` |
-| Конфиг проекта | `docsDir` | `docs` |
-| Конфиг проекта | `sharedDir` | `shared` |
-| Конфиг проекта | `outputDir` | `dist` |
-| `init` | режим | интерактивный |
-| `init` | стартовые файлы | создаются |
-| `check` | входной путь | `docsDir` из конфига или `./docs` |
+| Block declaration | `type` | `diagram` |
+| Project config | `docsDir` | `docs` |
+| Project config | `sharedDir` | `shared` |
+| Project config | `outputDir` | `dist` |
+| `init` | mode | interactive |
+| `init` | starter files | created |
+| `check` | input path | `docsDir` from config or `./docs` |
 | `check` | `--max-include-depth` | `5` |
-| `build` | входной путь | `docsDir` из конфига или `./docs` |
+| `build` | input path | `docsDir` from config or `./docs` |
 | `build` | `--max-include-depth` | `5` |
-| `build` | Mermaid-валидация | включена |
-| `build` | вывод для одного файла без `--output` | стандартный вывод |
-| `build` | вывод для каталога без `--output` | `outputDir` из конфига или `./dist` |
-| `report` | входной путь | `docsDir` из конфига или `./docs` |
-| `report` | вывод без `--output` | стандартный вывод |
-| Цветной вывод | `--no-color` | выключен |
-| Цветной вывод | `NO_COLOR` | не задана |
+| `build` | Mermaid validation | enabled |
+| `build` | single-file output without `--output` | stdout |
+| `build` | directory output without `--output` | `outputDir` from config or `./dist` |
+| `report` | input path | `docsDir` from config or `./docs` |
+| `report` | output without `--output` | stdout |
+| Colored output | `--no-color` | off |
+| Colored output | `NO_COLOR` | unset |
 
-## Ограничения Текущей Версии
+## Current Limitations
 
-- переиспользуемый блок должен в итоге разворачиваться ровно в один `mermaid`-блок;
-- короткая ссылка задается только через `block id`; `mdmm` ищет такой идентификатор во всех Markdown-файлах внутри `sharedDir`, рекурсивно, поэтому он должен быть уникален в общей библиотеке;
-- явная ссылка всегда записывается в форме `path/to/file.md#block-id`;
-- фрагменты разрешают внешние ссылки только на узлы из `exports`;
-- `alias` внутри одного `mermaid`-блока должен быть уникальным;
-- шаблонные параметры не предназначены для `node id`, `alias` и строки типа диаграммы;
-- глубина вложенности ограничивается параметром `--max-include-depth`;
-- `check` может пройти успешно, а `build` завершиться ошибкой, если итоговый Mermaid оказывается некорректным;
-- `adopt` пока не выполняет реальную миграцию.
+- a reusable block must ultimately expand into exactly one `mermaid` block;
+- a short reference is defined only by `block id`; `mdmm` resolves it across all Markdown files inside `sharedDir`, recursively, so it must be unique within the shared library;
+- an explicit reference must always use the `path/to/file.md#block-id` form;
+- fragments allow external references only to nodes listed in `exports`;
+- `alias` must be unique within a single `mermaid` block;
+- template arguments are not meant for node ids, `alias`, or the diagram type line;
+- nesting depth is limited by `--max-include-depth`;
+- `check` can succeed while `build` fails if the final Mermaid output is invalid;
+- `adopt` does not yet perform a real migration.
 
 ## FAQ
 
-**Нужен ли `mdmm.config.json`?**
+**Do I need `mdmm.config.json`?**
 
-Нет. Инструмент умеет работать и без конфига. Но для постоянной работы с проектом конфиг удобнее, потому что в нем один раз задаются каталоги документов, общей библиотеки и результата сборки.
+No. The tool can work without a config file. But for regular project work, the config is more convenient because it defines the document, shared-library, and output directories once.
 
-**Можно ли запускать `mdmm` на одном файле?**
+**Can I run `mdmm` on a single file?**
 
-Да. `check`, `build` и `report` принимают как отдельный `.md`-файл, так и каталог.
+Yes. `check`, `build`, and `report` accept either a single `.md` file or a directory.
 
-**Куда `mdmm` ищет короткие ссылки?**
+**Where does `mdmm` look for short references?**
 
-Только в `sharedDir`. Если нужно сослаться на конкретный файл, используйте явную ссылку `path/to/file.md#block-id`.
+Only inside `sharedDir`. If you need to point to a specific file, use an explicit reference like `path/to/file.md#block-id`.
 
-**Почему `build` иногда падает, хотя `check` проходит?**
+**Why does `build` sometimes fail even when `check` passes?**
 
-`check` проверяет правила языка `mdmm`, но не делает финальную Mermaid-валидацию. `build` по умолчанию валидирует уже готовый итоговый Mermaid-контент.
+`check` validates `mdmm` language rules, but it does not run final Mermaid validation. By default, `build` validates the fully rendered Mermaid output.
 
-**Что получится на выходе после `build`?**
+**What do I get after `build`?**
 
-Обычный Markdown, где все директивы `mdmm` уже развернуты в стандартные `mermaid`-блоки.
+Plain Markdown where all `mdmm` directives have already been expanded into standard `mermaid` blocks.

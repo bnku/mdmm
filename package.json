@@ -2,15 +2,25 @@
   "name": "mdmm",
   "version": "0.1.0",
   "description": "MDMM CLI for reusable Mermaid includes in Markdown documentation",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bnku/mdmm.git"
+  },
+  "homepage": "https://github.com/bnku/mdmm#readme",
+  "bugs": {
+    "url": "https://github.com/bnku/mdmm/issues"
+  },
   "bin": {
     "mdmm": "./bin/mdmm.js"
   },
   "files": [
     "bin/",
     "src/",
-    "README.md"
+    "README.md",
+    "README.RU.md",
+    "LICENSE"
   ],
   "engines": {
     "node": ">=22.0.0"

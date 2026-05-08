@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Run CLI smoke test
+        run: npm run smoke:bin
+
+      - name: Check example project
+        run: npm run check:examples
+
+      - name: Build example project
+        run: npm run build:examples
+
+      - name: Validate built Mermaid output
+        run: npm run validate:examples
+
+      - name: Generate example dependency report
+        run: npm run report:examples
+
+      - name: Verify npm package contents
+        run: npm run pack:dry-run
