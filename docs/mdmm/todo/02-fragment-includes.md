@@ -11,7 +11,7 @@
 ## Источники требований
 
 - `../00-roadmap.md`
-- `../01-intro-and-architecture.md`
+- `../../01-intro-and-architecture.md`
 - Результаты первого этапа: согласованный синтаксис блоков, правила сборки и базовые CI-проверки.
 
 ## Что входит в задачу
@@ -86,6 +86,6 @@
 - Реализована префиксация идентификаторов узлов в формате `<alias>__<node-id>`.
 - Реализована базовая проверка `exports`: внешняя диаграмма может ссылаться только на явно экспортированные узлы.
 - Добавлены ошибки `MISSING_ALIAS`, `INVALID_BLOCK_TYPE`, `DUPLICATE_ALIAS`, `MISSING_EXPORT`, `UNRESOLVED_FRAGMENT_INCLUDE`.
-- Добавлены примеры в `../../examples/docs/journey.md` и `../../examples/shared/customer-verification.md`.
+- Добавлены примеры в `../../examples/docs/fragment-include.md` и `../../examples/shared/customer-verification.md`.
 - Добавлены unit-тесты на позитивные и негативные сценарии во `../../test/preprocess.test.js`.
 - Добавлена end-to-end Mermaid-валидация собранного примера через `../../scripts/validate-mermaid-cli.js`.
