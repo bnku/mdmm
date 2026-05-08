@@ -372,14 +372,14 @@ test("builds fragment templates with inline and multiline arguments", async () =
   await writeWorkspaceFile(
     rootDir,
     "shared/fragments.md",
-    `<!-- mermaid:block customer.fragment type=fragment exports=entry,done -->
+    `<!-- mermaid:fragment customer.fragment exports=entry,done -->
 \`\`\`mermaid
 flowchart TD
 entry["%owner|Sales Ops%"]
 entry --> review{"Review by %reviewer|Finance%?"}
 review --> done["Done for %owner|Sales Ops%"]
 \`\`\`
-<!-- /mermaid:block -->
+<!-- /mermaid:fragment -->
 `,
   );
 
@@ -415,21 +415,21 @@ test("supports nested templated includes and forwarded reference arguments", asy
   await writeWorkspaceFile(
     rootDir,
     "shared/library.md",
-    `<!-- mermaid:block review.fragment type=fragment exports=entry,done -->
+    `<!-- mermaid:fragment review.fragment exports=entry,done -->
 \`\`\`mermaid
 flowchart TD
 entry["Review: %reviewer|Finance%"]
 entry --> done["Done"]
 \`\`\`
-<!-- /mermaid:block -->
+<!-- /mermaid:fragment -->
 
-<!-- mermaid:block audit.fragment type=fragment exports=entry,done -->
+<!-- mermaid:fragment audit.fragment exports=entry,done -->
 \`\`\`mermaid
 flowchart TD
 entry["Audit: %reviewer|Finance%"]
 entry --> done["Closed"]
 \`\`\`
-<!-- /mermaid:block -->
+<!-- /mermaid:fragment -->
 
 <!-- mermaid:block review.wrapper -->
 \`\`\`mermaid
@@ -464,13 +464,13 @@ test("supports nested templated includes with explicit path reference arguments"
   await writeWorkspaceFile(
     rootDir,
     "shared/library.md",
-    `<!-- mermaid:block review.fragment type=fragment exports=entry,done -->
+    `<!-- mermaid:fragment review.fragment exports=entry,done -->
 \`\`\`mermaid
 flowchart TD
 entry["Review %owner|Sales Ops%: %reviewer|Finance%"]
 entry --> done["Done"]
 \`\`\`
-<!-- /mermaid:block -->
+<!-- /mermaid:fragment -->
 
 <!-- mermaid:block review.wrapper -->
 \`\`\`mermaid
@@ -506,13 +506,13 @@ test("keeps default explicit path references relative to the template file", asy
   await writeWorkspaceFile(
     rootDir,
     "shared/library.md",
-    `<!-- mermaid:block review.fragment type=fragment exports=entry,done -->
+    `<!-- mermaid:fragment review.fragment exports=entry,done -->
 \`\`\`mermaid
 flowchart TD
 entry["Review %owner|Sales Ops%: %reviewer|Finance%"]
 entry --> done["Done"]
 \`\`\`
-<!-- /mermaid:block -->
+<!-- /mermaid:fragment -->
 
 <!-- mermaid:block review.wrapper -->
 \`\`\`mermaid
@@ -642,7 +642,7 @@ test("builds mermaid diagram with fragment include and alias rewrite", async () 
   await writeWorkspaceFile(
     rootDir,
     "shared/fragments.md",
-    `<!-- mermaid:block customer.fragment type=fragment exports=entry,success,fail -->
+    `<!-- mermaid:fragment customer.fragment exports=entry,success,fail -->
 \`\`\`mermaid
 flowchart RL
 entry[Start]
@@ -650,7 +650,7 @@ entry --> check{Valid?}
 check -- Yes --> success[Approved]
 check -- No --> fail[Fix]
 \`\`\`
-<!-- /mermaid:block -->
+<!-- /mermaid:fragment -->
 `,
   );
 
@@ -681,13 +681,13 @@ test("builds mermaid diagram with short fragment reference using cwd defaults", 
   await writeWorkspaceFile(
     rootDir,
     "shared/fragments.md",
-    `<!-- mermaid:block customer.fragment type=fragment exports=entry,success -->
+    `<!-- mermaid:fragment customer exports=entry,success -->
 \`\`\`mermaid
 flowchart TD
 entry[Start]
 entry --> success[Done]
 \`\`\`
-<!-- /mermaid:block -->
+<!-- /mermaid:fragment -->
 `,
   );
 
@@ -697,7 +697,7 @@ entry --> success[Done]
     `\`\`\`mermaid
 flowchart LR
 Begin --> flow__entry
-%% include: customer.fragment as flow
+%% include: customer as flow
 flow__success --> Finish
 \`\`\`
 `,
@@ -714,13 +714,13 @@ test("supports reusing one fragment with different aliases", async () => {
   await writeWorkspaceFile(
     rootDir,
     "shared/fragments.md",
-    `<!-- mermaid:block customer.fragment type=fragment exports=entry,success -->
+    `<!-- mermaid:fragment customer.fragment exports=entry,success -->
 \`\`\`mermaid
 flowchart LR
 entry[Start]
 entry --> success[Done]
 \`\`\`
-<!-- /mermaid:block -->
+<!-- /mermaid:fragment -->
 `,
   );
 
@@ -770,14 +770,14 @@ test("fails when external diagram references non-exported fragment node", async 
   await writeWorkspaceFile(
     rootDir,
     "shared/fragments.md",
-    `<!-- mermaid:block customer.fragment type=fragment exports=entry,success -->
+    `<!-- mermaid:fragment customer.fragment exports=entry,success -->
 \`\`\`mermaid
 flowchart TD
 entry[Start]
 entry --> hidden[Internal]
 hidden --> success[Done]
 \`\`\`
-<!-- /mermaid:block -->
+<!-- /mermaid:fragment -->
 `,
   );
 
@@ -806,12 +806,12 @@ test("fails when diagram include targets a fragment block", async () => {
   await writeWorkspaceFile(
     rootDir,
     "shared/fragments.md",
-    `<!-- mermaid:block customer.fragment type=fragment exports=entry -->
+    `<!-- mermaid:fragment customer.fragment exports=entry -->
 \`\`\`mermaid
 flowchart TD
 entry[Start]
 \`\`\`
-<!-- /mermaid:block -->
+<!-- /mermaid:fragment -->
 `,
   );
 
@@ -831,6 +831,70 @@ entry[Start]
   });
 });
 
+test("fails on legacy fragment declaration syntax", async () => {
+  const rootDir = await createWorkspace();
+
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/fragments.md",
+    `<!-- mermaid:block customer.fragment type=fragment exports=entry -->
+\`\`\`mermaid
+flowchart TD
+entry[Start]
+\`\`\`
+<!-- /mermaid:block -->
+`,
+  );
+
+  const inputPath = await writeWorkspaceFile(
+    rootDir,
+    "docs/journey.md",
+    `\`\`\`mermaid
+flowchart TD
+%% include: customer.fragment as flow
+\`\`\`
+`,
+  );
+
+  await assert.rejects(() => preprocessFile(inputPath, undefined, { cwd: rootDir }), (error) => {
+    assert.ok(error instanceof MermaidIncludeError);
+    assert.equal(error.details.code, "LEGACY_FRAGMENT_DECLARATION");
+    return true;
+  });
+});
+
+test("fails on mismatched fragment closing tag", async () => {
+  const rootDir = await createWorkspace();
+
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/fragments.md",
+    `<!-- mermaid:fragment customer exports=entry -->
+\`\`\`mermaid
+flowchart TD
+entry[Start]
+\`\`\`
+<!-- /mermaid:block -->
+`,
+  );
+
+  const inputPath = await writeWorkspaceFile(
+    rootDir,
+    "docs/journey.md",
+    `\`\`\`mermaid
+flowchart TD
+%% include: customer as flow
+\`\`\`
+`,
+  );
+
+  await assert.rejects(() => preprocessFile(inputPath, undefined, { cwd: rootDir }), (error) => {
+    assert.ok(error instanceof MermaidIncludeError);
+    assert.equal(error.details.code, "MISMATCHED_BLOCK_DECLARATION");
+    return true;
+  });
+});
+
 test("build command supports recursive directory mode", async () => {
   const rootDir = await createWorkspace();
 
@@ -844,13 +908,13 @@ A --> B
 \`\`\`
 <!-- /mermaid:block -->
 
-<!-- mermaid:block customer.fragment type=fragment exports=entry,done -->
+<!-- mermaid:fragment customer.fragment exports=entry,done -->
 \`\`\`mermaid
 flowchart TD
 entry[Start]
 entry --> done[Done]
 \`\`\`
-<!-- /mermaid:block -->
+<!-- /mermaid:fragment -->
 `,
   );
 
@@ -1214,13 +1278,13 @@ A --> B
 \`\`\`
 <!-- /mermaid:block -->
 
-<!-- mermaid:block customer.fragment type=fragment exports=entry,success -->
+<!-- mermaid:fragment customer.fragment exports=entry,success -->
 \`\`\`mermaid
 flowchart TD
 entry[Start]
 entry --> success[Done]
 \`\`\`
-<!-- /mermaid:block -->
+<!-- /mermaid:fragment -->
 `,
   );
 
@@ -1268,13 +1332,13 @@ owner["%owner%"] --> review["%reviewer|Finance%"]
 \`\`\`
 <!-- /mermaid:block -->
 
-<!-- mermaid:block customer.fragment type=fragment exports=entry,done -->
+<!-- mermaid:fragment customer.fragment exports=entry,done -->
 \`\`\`mermaid
 flowchart TD
 entry["%owner|Sales Ops%"]
 entry --> done["Done"]
 \`\`\`
-<!-- /mermaid:block -->
+<!-- /mermaid:fragment -->
 `,
   );
 
@@ -1347,13 +1411,13 @@ A --> B
 \`\`\`
 <!-- /mermaid:block -->
 
-<!-- mermaid:block customer.fragment type=fragment exports=entry,success -->
+<!-- mermaid:fragment customer.fragment exports=entry,success -->
 \`\`\`mermaid
 flowchart TD
 entry[Start]
 entry --> success[Done]
 \`\`\`
-<!-- /mermaid:block -->
+<!-- /mermaid:fragment -->
 `,
   );
 
@@ -1734,12 +1798,12 @@ test("fails when one diagram reuses the same fragment alias twice", async () => 
   await writeWorkspaceFile(
     rootDir,
     "shared/fragments.md",
-    `<!-- mermaid:block customer.fragment type=fragment exports=entry -->
+    `<!-- mermaid:fragment customer.fragment exports=entry -->
 \`\`\`mermaid
 flowchart TD
 entry[Start]
 \`\`\`
-<!-- /mermaid:block -->
+<!-- /mermaid:fragment -->
 `,
   );
 
@@ -1786,12 +1850,12 @@ test("fails when fragment export is declared but missing in body", async () => {
   await writeWorkspaceFile(
     rootDir,
     "shared/fragments.md",
-    `<!-- mermaid:block customer.fragment type=fragment exports=entry,missing -->
+    `<!-- mermaid:fragment customer.fragment exports=entry,missing -->
 \`\`\`mermaid
 flowchart TD
 entry[Start]
 \`\`\`
-<!-- /mermaid:block -->
+<!-- /mermaid:fragment -->
 `,
   );
 
@@ -1818,11 +1882,11 @@ test("fails when fragment block omits diagram type line", async () => {
   await writeWorkspaceFile(
     rootDir,
     "shared/fragments.md",
-    `<!-- mermaid:block customer.fragment type=fragment exports=entry -->
+    `<!-- mermaid:fragment customer.fragment exports=entry -->
 \`\`\`mermaid
 entry[Start]
 \`\`\`
-<!-- /mermaid:block -->
+<!-- /mermaid:fragment -->
 `,
   );
 

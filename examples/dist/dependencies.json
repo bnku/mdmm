@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-08T21:16:38.578Z",
+  "generatedAt": "2026-05-08T22:16:44.535Z",
   "rootPath": "examples",
   "summary": {
     "fileCount": 5,
@@ -35,17 +35,17 @@
       "dependencies": [
         {
           "type": "fragment",
-          "reference": "verification-fragment.fragment",
+          "reference": "verification-fragment",
           "target": "examples/shared/verification-fragment.md",
-          "blockId": "verification-fragment.fragment",
+          "blockId": "verification-fragment",
           "alias": "kyc",
           "args": {}
         },
         {
           "type": "fragment",
-          "reference": "../shared/verification-fragment.md#verification-fragment.fragment",
+          "reference": "../shared/verification-fragment.md#verification-fragment",
           "target": "examples/shared/verification-fragment.md",
-          "blockId": "verification-fragment.fragment",
+          "blockId": "verification-fragment",
           "alias": "explicit",
           "args": {}
         }
@@ -97,9 +97,9 @@
       "dependencies": [
         {
           "type": "fragment",
-          "reference": "template.verification-fragment",
+          "reference": "template-verification",
           "target": "examples/shared/customer-templates.md",
-          "blockId": "template.verification-fragment",
+          "blockId": "template-verification",
           "alias": "risk",
           "args": {
             "owner": "Risk Ops",
@@ -108,9 +108,9 @@
         },
         {
           "type": "fragment",
-          "reference": "../shared/customer-templates.md#template.verification-fragment",
+          "reference": "../shared/customer-templates.md#template-verification",
           "target": "examples/shared/customer-templates.md",
-          "blockId": "template.verification-fragment",
+          "blockId": "template-verification",
           "alias": "ops",
           "args": {
             "owner": "Sales Ops",
@@ -130,7 +130,7 @@
           "blockId": "template.wrapper",
           "alias": null,
           "args": {
-            "fragmentRef": "template.audit-fragment",
+            "fragmentRef": "template-audit",
             "reviewer": "Legal"
           }
         },
@@ -141,7 +141,7 @@
           "blockId": "template.wrapper",
           "alias": null,
           "args": {
-            "fragmentRef": "template.verification-fragment",
+            "fragmentRef": "template-verification",
             "reviewer": "Legal"
           }
         },
@@ -152,7 +152,7 @@
           "blockId": "template.wrapper",
           "alias": null,
           "args": {
-            "fragmentRef": "../shared/customer-templates.md#template.audit-fragment",
+            "fragmentRef": "../shared/customer-templates.md#template-audit",
             "owner": "Risk Ops",
             "reviewer": "Legal"
           }
@@ -161,6 +161,33 @@
     }
   ],
   "blocks": [
+    {
+      "target": "examples/shared/customer-templates.md",
+      "blockId": "template-verification",
+      "useCount": 2,
+      "usedBy": [
+        {
+          "path": "examples/docs/template-fragment.md",
+          "type": "fragment",
+          "alias": "ops",
+          "reference": "../shared/customer-templates.md#template-verification",
+          "args": {
+            "owner": "Sales Ops",
+            "reviewer": "Finance"
+          }
+        },
+        {
+          "path": "examples/docs/template-fragment.md",
+          "type": "fragment",
+          "alias": "risk",
+          "reference": "template-verification",
+          "args": {
+            "owner": "Risk Ops",
+            "reviewer": "Legal"
+          }
+        }
+      ]
+    },
     {
       "target": "examples/shared/customer-templates.md",
       "blockId": "template.customer-overview",
@@ -201,33 +228,6 @@
     },
     {
       "target": "examples/shared/customer-templates.md",
-      "blockId": "template.verification-fragment",
-      "useCount": 2,
-      "usedBy": [
-        {
-          "path": "examples/docs/template-fragment.md",
-          "type": "fragment",
-          "alias": "ops",
-          "reference": "../shared/customer-templates.md#template.verification-fragment",
-          "args": {
-            "owner": "Sales Ops",
-            "reviewer": "Finance"
-          }
-        },
-        {
-          "path": "examples/docs/template-fragment.md",
-          "type": "fragment",
-          "alias": "risk",
-          "reference": "template.verification-fragment",
-          "args": {
-            "owner": "Risk Ops",
-            "reviewer": "Legal"
-          }
-        }
-      ]
-    },
-    {
-      "target": "examples/shared/customer-templates.md",
       "blockId": "template.wrapper",
       "useCount": 3,
       "usedBy": [
@@ -237,7 +237,7 @@
           "alias": null,
           "reference": "template.wrapper",
           "args": {
-            "fragmentRef": "template.audit-fragment",
+            "fragmentRef": "template-audit",
             "reviewer": "Legal"
           }
         },
@@ -247,7 +247,7 @@
           "alias": null,
           "reference": "template.wrapper",
           "args": {
-            "fragmentRef": "template.verification-fragment",
+            "fragmentRef": "template-verification",
             "reviewer": "Legal"
           }
         },
@@ -257,7 +257,7 @@
           "alias": null,
           "reference": "template.wrapper",
           "args": {
-            "fragmentRef": "../shared/customer-templates.md#template.audit-fragment",
+            "fragmentRef": "../shared/customer-templates.md#template-audit",
             "owner": "Risk Ops",
             "reviewer": "Legal"
           }
@@ -294,21 +294,21 @@
     },
     {
       "target": "examples/shared/verification-fragment.md",
-      "blockId": "verification-fragment.fragment",
+      "blockId": "verification-fragment",
       "useCount": 2,
       "usedBy": [
         {
           "path": "examples/docs/fragment-include.md",
           "type": "fragment",
           "alias": "explicit",
-          "reference": "../shared/verification-fragment.md#verification-fragment.fragment",
+          "reference": "../shared/verification-fragment.md#verification-fragment",
           "args": {}
         },
         {
           "path": "examples/docs/fragment-include.md",
           "type": "fragment",
           "alias": "kyc",
-          "reference": "verification-fragment.fragment",
+          "reference": "verification-fragment",
           "args": {}
         }
       ]
