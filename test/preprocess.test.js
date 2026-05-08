@@ -7,7 +7,9 @@ import process from "node:process";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
+import packageJson from "../package.json" with { type: "json" };
 
+import { createLogger } from "../src/logger.js";
 import { loadProjectSettings } from "../src/project.js";
 import { MermaidIncludeError, preprocessFile } from "../src/preprocess.js";
 import { collectFileDependencies, buildDependencyReport } from "../src/report.js";
@@ -26,6 +28,16 @@ async function writeWorkspaceFile(rootDir, relativePath, content) {
   await mkdir(path.dirname(absolutePath), { recursive: true });
   await writeFile(absolutePath, content, "utf8");
   return absolutePath;
+}
+
+function createCaptureStream({ isTTY = false } = {}) {
+  return {
+    isTTY,
+    output: "",
+    write(chunk) {
+      this.output += chunk;
+    },
+  };
 }
 
 test("builds markdown with multiple includes", async () => {
@@ -926,6 +938,135 @@ customer.overview
   assert.match(built, /flowchart TD/);
 });
 
+test("build command validates Mermaid output by default", async () => {
+  const rootDir = await createWorkspace();
+
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/library.md",
+    `<!-- mermaid:block customer.overview -->
+\`\`\`mermaid
+flowchart TD
+A --->
+\`\`\`
+<!-- /mermaid:block -->
+`,
+  );
+
+  const inputPath = await writeWorkspaceFile(
+    rootDir,
+    "docs/one.md",
+    `\`\`\`mermaid-include
+customer.overview
+\`\`\`
+`,
+  );
+
+  const { stdout } = await execFileAsync(process.execPath, [cliPath, "check", inputPath], {
+    cwd: rootDir,
+  });
+  assert.match(stdout, /OK .*docs\/one\.md/);
+
+  await assert.rejects(
+    () => execFileAsync(process.execPath, [cliPath, "build", inputPath], { cwd: rootDir }),
+    (error) => {
+      assert.match(error.stderr, /Mermaid validation failed/);
+      return true;
+    },
+  );
+});
+
+test("build command skips Mermaid validation with --no-validate", async () => {
+  const rootDir = await createWorkspace();
+  const outputPath = path.join(rootDir, "dist", "one.md");
+
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/library.md",
+    `<!-- mermaid:block customer.overview -->
+\`\`\`mermaid
+flowchart TD
+A --->
+\`\`\`
+<!-- /mermaid:block -->
+`,
+  );
+
+  const inputPath = await writeWorkspaceFile(
+    rootDir,
+    "docs/one.md",
+    `\`\`\`mermaid-include
+customer.overview
+\`\`\`
+`,
+  );
+
+  const { stdout } = await execFileAsync(
+    process.execPath,
+    [cliPath, "build", inputPath, "--output", outputPath, "--no-validate"],
+    {
+      cwd: rootDir,
+    },
+  );
+
+  assert.match(stdout, /Built dist\/one\.md/);
+  const built = await readFile(outputPath, "utf8");
+  assert.match(built, /A --->/);
+});
+
+test("directory build does not write partial output when Mermaid validation fails", async () => {
+  const rootDir = await createWorkspace();
+  const outputDir = path.join(rootDir, "dist");
+
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/library.md",
+    `<!-- mermaid:block valid.overview -->
+\`\`\`mermaid
+flowchart TD
+A --> B
+\`\`\`
+<!-- /mermaid:block -->
+
+<!-- mermaid:block invalid.overview -->
+\`\`\`mermaid
+flowchart TD
+A --->
+\`\`\`
+<!-- /mermaid:block -->
+`,
+  );
+
+  const docsDir = path.join(rootDir, "docs");
+  await writeWorkspaceFile(
+    rootDir,
+    "docs/one.md",
+    `\`\`\`mermaid-include
+valid.overview
+\`\`\`
+`,
+  );
+  await writeWorkspaceFile(
+    rootDir,
+    "docs/two.md",
+    `\`\`\`mermaid-include
+invalid.overview
+\`\`\`
+`,
+  );
+
+  await assert.rejects(
+    () => execFileAsync(process.execPath, [cliPath, "build", docsDir, "--output", outputDir], { cwd: rootDir }),
+    (error) => {
+      assert.match(error.stderr, /Mermaid validation failed/);
+      return true;
+    },
+  );
+
+  await assert.rejects(() => readFile(path.join(outputDir, "one.md"), "utf8"));
+  await assert.rejects(() => readFile(path.join(outputDir, "two.md"), "utf8"));
+});
+
 test("root directory check ignores shared and output directories from config", async () => {
   const rootDir = await createWorkspace();
 
@@ -1214,6 +1355,25 @@ test("cli help prints usage", async () => {
 
   assert.match(stdout, /Usage:/);
   assert.match(stdout, /mdmm build/);
+  assert.match(stdout, /mdmm init/);
+});
+
+test("cli without arguments prints help and next steps", async () => {
+  const { stdout } = await execFileAsync(process.execPath, [cliPath], {
+    cwd: projectRoot,
+  });
+
+  assert.match(stdout, /Usage:/);
+  assert.match(stdout, /Quick start:/);
+  assert.match(stdout, /npx mdmm@latest init/);
+});
+
+test("cli prints package version", async () => {
+  const { stdout } = await execFileAsync(process.execPath, [cliPath, "--version"], {
+    cwd: projectRoot,
+  });
+
+  assert.equal(stdout.trim(), packageJson.version);
 });
 
 test("cli rejects unknown command", async () => {
@@ -1255,6 +1415,69 @@ customer.overview
   });
 
   assert.match(stdout, /```mermaid\nflowchart TD\nA --> B\n```\n$/);
+});
+
+test("init command scaffolds a project with starter files", async () => {
+  const rootDir = await createWorkspace();
+
+  const { stdout } = await execFileAsync(process.execPath, [cliPath, "init", "--yes"], {
+    cwd: rootDir,
+  });
+
+  assert.match(stdout, /Initialized mdmm project/);
+  assert.match(stdout, /Created mdmm\.config\.json/);
+  assert.match(stdout, /Created docs\/index\.md/);
+  assert.match(stdout, /Created shared\/getting-started\.md/);
+
+  const config = JSON.parse(await readFile(path.join(rootDir, "mdmm.config.json"), "utf8"));
+  assert.deepEqual(config, {
+    docsDir: "docs",
+    sharedDir: "shared",
+    outputDir: "dist",
+  });
+
+  const starterDoc = await readFile(path.join(rootDir, "docs", "index.md"), "utf8");
+  const starterShared = await readFile(path.join(rootDir, "shared", "getting-started.md"), "utf8");
+  assert.match(starterDoc, /getting-started\.overview/);
+  assert.match(starterShared, /mermaid:block getting-started\.overview/);
+});
+
+test("init command supports --no-starter", async () => {
+  const rootDir = await createWorkspace();
+
+  const { stdout } = await execFileAsync(process.execPath, [cliPath, "init", "--yes", "--no-starter"], {
+    cwd: rootDir,
+  });
+
+  assert.match(stdout, /Initialized mdmm project/);
+  assert.match(stdout, /Created mdmm\.config\.json/);
+  assert.doesNotMatch(stdout, /docs\/index\.md/);
+  assert.doesNotMatch(stdout, /shared\/getting-started\.md/);
+
+  await assert.rejects(() => readFile(path.join(rootDir, "docs", "index.md"), "utf8"));
+  await assert.rejects(() => readFile(path.join(rootDir, "shared", "getting-started.md"), "utf8"));
+});
+
+test("init command refuses to overwrite existing config without --force", async () => {
+  const rootDir = await createWorkspace();
+  await writeWorkspaceFile(rootDir, "mdmm.config.json", `{}\n`);
+
+  await assert.rejects(
+    () => execFileAsync(process.execPath, [cliPath, "init", "--yes"], { cwd: rootDir }),
+    (error) => {
+      assert.match(error.stderr, /Refusing to overwrite existing file .*mdmm\.config\.json/);
+      return true;
+    },
+  );
+});
+
+test("adopt command prints planned placeholder guidance", async () => {
+  const { stdout } = await execFileAsync(process.execPath, [cliPath, "adopt"], {
+    cwd: projectRoot,
+  });
+
+  assert.match(stdout, /mdmm adopt is planned but not implemented yet/);
+  assert.match(stdout, /find duplicate Mermaid blocks/);
 });
 
 test("cli check reports single file success", async () => {
@@ -1328,6 +1551,27 @@ test("loadProjectSettings falls back to cwd defaults for missing path", async ()
   assert.equal(settings.docsDir, path.join(rootDir, "docs"));
   assert.equal(settings.sharedDir, path.join(rootDir, "shared"));
   assert.equal(settings.outputDir, path.join(rootDir, "dist"));
+});
+
+test("logger disables ANSI colors when --no-color style option is active", () => {
+  const stdout = createCaptureStream({ isTTY: true });
+  const stderr = createCaptureStream({ isTTY: true });
+  const logger = createLogger({ stdout, stderr, noColor: true });
+
+  logger.success("OK docs/one.md");
+  logger.error("Error: broken");
+
+  assert.equal(stdout.output, "OK docs/one.md\n");
+  assert.equal(stderr.output, "Error: broken\n");
+});
+
+test("logger adds ANSI colors when terminal colors are enabled", () => {
+  const stdout = createCaptureStream({ isTTY: true });
+  const logger = createLogger({ stdout, forceColor: true });
+
+  logger.success("Built docs/one.md");
+
+  assert.match(stdout.output, /\u001B\[32mBuilt docs\/one\.md\u001B\[0m\n/);
 });
 
 test("loadProjectSettings rejects non-object config", async () => {

@@ -1,6 +1,6 @@
 # Задача 04. Build-валидация и атомарный output
 
-**Статус:** ⏳ Запланировано
+**Статус:** ✅ Реализован прототип
 
 ## Цель
 
@@ -78,3 +78,12 @@
 - Пользователь может явно отключить финальную валидацию через `--no-validate`, понимая последствия.
 - При directory build нет partial output после ошибки в одном из документов.
 - Пользовательская модель становится простой: `check` для быстрого прогона, `build` для публикационного результата.
+
+## Что реализовано сейчас
+
+- Добавлен `../../src/validator.js` с встроенной Mermaid-валидацией итогового Markdown.
+- `mdmm build` теперь валидирует Mermaid по умолчанию для single-file, stdout и directory mode.
+- Добавлен явный opt-out через `--no-validate`.
+- Directory build переведен на staged flow: сначала preprocess + validate всех файлов, затем запись в output.
+- `validate:examples` сохранен как maintainer-level e2e smoke script поверх уже собранных примеров.
+- Добавлены тесты на default validation, `--no-validate`, failure на невалидном Mermaid и отсутствие partial output.

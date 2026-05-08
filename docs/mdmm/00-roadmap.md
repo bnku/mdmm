@@ -89,33 +89,41 @@
 
 ### Задача 03. CLI surface, init и базовый onboarding
 
-**Статус:** ⏳ Запланировано
+**Статус:** ✅ Реализован прототип
 
 Цель: сделать первый запуск `mdmm` понятным без чтения исходников, добавить greenfield-onboarding и зафиксировать устойчивый command surface для дальнейшего роста CLI.
+
+Текущий результат: в `../../src/cli.js` реализован command-based CLI surface, добавлены `mdmm init`, `mdmm --version`, help + quick start без скрытого действия по умолчанию, non-interactive `init --yes`, starter scaffolding и placeholder-команда `mdmm adopt`.
 
 Подробности: `./todo/03-cli-surface-and-init.md`
 
 ### Задача 04. Build-валидация и атомарный output
 
-**Статус:** ⏳ Запланировано
+**Статус:** ✅ Реализован прототип
 
 Цель: превратить `build` в надежный publish-step, который по умолчанию валидирует итоговые Mermaid-диаграммы и не оставляет partial output при ошибке.
+
+Текущий результат: `build` теперь по умолчанию валидирует итоговый Mermaid через встроенный validator-модуль `../../src/validator.js`, поддерживает `--no-validate`, а directory build сначала собирает и валидирует все файлы и только потом пишет output без partial artifacts.
 
 Подробности: `./todo/04-build-validation-and-atomic-output.md`
 
 ### Задача 05. Цветной output, help и user-facing документация
 
-**Статус:** ⏳ Запланировано
+**Статус:** ✅ Реализован прототип
 
 Цель: сделать CLI визуально понятным, а install/use cases - очевидными для пользователя, который впервые сталкивается с `mdmm`.
+
+Текущий результат: добавлен `../../src/logger.js` с цветным success/error output и поддержкой `NO_COLOR` / `--no-color`, help переписан под реальные сценарии запуска, а `../../README.md` разделен на user-facing usage и maintainer/development workflows.
 
 Подробности: `./todo/05-output-help-and-usage-docs.md`
 
 ### Задача 06. Placeholder для `adopt` и foundation для future retrofit
 
-**Статус:** ⏳ Запланировано
+**Статус:** 🟡 Частично реализовано
 
 Цель: зарезервировать безопасный путь для будущего внедрения `mdmm` в уже существующие docs-проекты и не смешивать этот сценарий с `init`.
+
+Текущий результат: в CLI уже зарезервирована команда `mdmm adopt`, README/help явно разводят `init` и `adopt`, добавлены smoke/regression-тесты на placeholder-поведение. При этом реальный analysis/foundation слой для inventory, duplicate detection и migration suggestions еще не реализован.
 
 Подробности: `./todo/06-adopt-placeholder-and-foundation.md`
 

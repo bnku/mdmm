@@ -6,10 +6,11 @@ CLI-утилита `mdmm` для переиспользования Mermaid-ди
 
 ## Что уже есть
 
-- `./src/cli.js` — CLI с командами `build` и `check` для файлов и каталогов.
+- `./src/cli.js` — CLI с командами `init`, `build`, `check`, `report` и placeholder-командой `adopt`.
 - `./bin/mdmm.js` — publishable entrypoint для локального запуска и будущего `npx`.
 - `./src/preprocess.js` — ядро препроцессора.
 - `./src/report.js` — сбор dependency report по include-использованию.
+- `./src/validator.js` — встроенная Mermaid-валидация итогового Markdown для `build`.
 - `./examples/shared/customer-verification.md` — библиотека канонических Mermaid-блоков.
 - `./examples/shared/customer-templates.md` — библиотека шаблонных Mermaid-блоков и фрагментов.
 - `./examples/mdmm.config.json` — пример project-config для docs/shared/output директорий.
@@ -208,15 +209,51 @@ review.wrapper fragmentRef=./library.md#audit.fragment reviewer=Legal
 - не используйте `%...%` в `node id`, alias и строке типа диаграммы вроде `flowchart TD`;
 - для namespace fragment-узлов продолжайте использовать `as <alias>`, а не шаблонный `prefix`.
 
-## Команды
+## Установка и запуск
 
-- `npm test` — запускает unit-тесты.
-- `npm run check:examples` — рекурсивно проверяет весь каталог `./examples` с учетом конфига.
-- `npm run build:examples` — рекурсивно собирает весь каталог `./examples` в `./examples/dist` с учетом конфига.
-- `npm run validate:examples` — валидирует все feature-based примеры, включая шаблонные.
-- `npm run report:examples` — записывает JSON usage-map в `./examples/dist/dependencies.json`.
-- `npm run smoke:bin` — проверяет publishable CLI entrypoint.
-- `npm run pack:dry-run` — показывает, что именно попадет в npm-пакет.
+Запуск без установки:
+
+```bash
+npx mdmm@latest --help
+npx mdmm@latest init
+npx mdmm@latest build
+```
+
+Глобальная установка:
+
+```bash
+npm i -g mdmm
+mdmm --help
+mdmm build
+```
+
+Установка в документационный проект как devDependency:
+
+```bash
+npm i -D mdmm
+npx mdmm init
+npx mdmm check
+npx mdmm build
+```
+
+## User Commands
+
+- `mdmm` — показывает help и quick start без скрытого действия по умолчанию.
+- `mdmm --version` — печатает установленную версию пакета.
+- `mdmm init` — интерактивно создает `mdmm.config.json`, каталоги `docs/`, `shared/`, `dist/` и starter-файлы.
+- `mdmm init --yes` — создает проект с дефолтами без вопросов.
+- `mdmm init --yes --no-starter` — создает только структуру и конфиг, без starter Markdown.
+- `mdmm check` — быстрый mdmm-level check: includes, refs, aliases, templates, exports и config.
+- `mdmm build` — publish-oriented build: разворачивает include, валидирует итоговый Mermaid и пишет output.
+- `mdmm build --no-validate` — пропускает финальную Mermaid-валидацию по явному opt-out.
+- `mdmm report` — строит JSON dependency report.
+- `mdmm adopt` — placeholder под будущий analyze-first retrofit flow для уже существующего docs-проекта.
+
+### `check` vs `build`
+
+- `check` нужен для быстрого прогона логики самого `mdmm`.
+- `build` нужен для публикационного результата и по умолчанию валидирует итоговые Mermaid-блоки.
+- Если `build` падает на Mermaid validation, output не записывается частично.
 
 ## CLI Usage
 
@@ -224,18 +261,30 @@ review.wrapper fragmentRef=./library.md#audit.fragment reviewer=Legal
 
 ```bash
 ./bin/mdmm.js --help
-./bin/mdmm.js build ./examples
+./bin/mdmm.js init --yes
 ./bin/mdmm.js check
+./bin/mdmm.js build ./examples --output ./examples/dist
 ./bin/mdmm.js report ./examples --output ./examples/dist/dependencies.json
 ```
 
 После публикации пакет будет запускаться как обычная CLI-утилита:
 
 ```bash
-npx mdmm --help
-npx mdmm build
-npx mdmm build ./docs --output ./dist/docs
+npx mdmm@latest init
+npx mdmm@latest check
+npx mdmm@latest build ./docs --output ./dist/docs
+npx mdmm@latest report ./docs --output ./dist/dependencies.json
 ```
+
+## Development
+
+- `npm test` — запускает unit-тесты.
+- `npm run check:examples` — рекурсивно проверяет весь каталог `./examples` с учетом конфига.
+- `npm run build:examples` — рекурсивно собирает весь каталог `./examples` в `./examples/dist` с учетом конфига и встроенной Mermaid-валидацией.
+- `npm run validate:examples` — maintainer-level end-to-end smoke через `mermaid-cli` поверх уже собранных примеров.
+- `npm run report:examples` — записывает JSON usage-map в `./examples/dist/dependencies.json`.
+- `npm run smoke:bin` — проверяет publishable CLI entrypoint.
+- `npm run pack:dry-run` — показывает, что именно попадет в npm-пакет.
 
 ## Project Config
 
@@ -264,6 +313,8 @@ CLI умеет работать и с отдельным `.md`, и с катал
 - при `build`, `check` и `report` без positional args CLI берет `docsDir` из конфига или из дефолта `cwd/docs`;
 - при `build <dir>` без `--output` CLI пишет в `outputDir`;
 - `sharedDir` и `outputDir` автоматически пропускаются при рекурсивной обработке root-каталога.
+- `build` по умолчанию валидирует итоговые Mermaid-блоки до записи файлов;
+- для отключения финальной Mermaid-валидации нужен явный `--no-validate`.
 
 Примеры:
 

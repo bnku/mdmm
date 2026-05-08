@@ -31,5 +31,9 @@
     "report:examples": "./bin/mdmm.js report ./examples --output ./examples/dist/dependencies.json",
     "smoke:bin": "./bin/mdmm.js --help",
     "pack:dry-run": "npm pack --dry-run"
+  },
+  "dependencies": {
+    "jsdom": "^29.1.1",
+    "mermaid": "^11.14.0"
   }
 }

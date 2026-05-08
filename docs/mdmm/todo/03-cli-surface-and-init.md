@@ -1,6 +1,6 @@
 # Задача 03. CLI surface, init и базовый onboarding
 
-**Статус:** ⏳ Запланировано
+**Статус:** ✅ Реализован прототип
 
 ## Цель
 
@@ -79,3 +79,12 @@
 - `mdmm init --yes` создает минимальный рабочий проект без ручного редактирования конфига.
 - Новый command surface расширяем и не заставляет переписывать весь `src/cli.js` при добавлении `adopt` или других команд.
 - В help и README нет скрытой зависимости от внутренних repo-скриптов.
+
+## Что реализовано сейчас
+
+- `../../src/cli.js` переведен на command-based CLI surface вместо простого `if/else`-роутинга.
+- Добавлены `mdmm init`, `mdmm --version`, `mdmm adopt` и поведение `mdmm` без аргументов через help + quick start.
+- `../../src/scaffold.js` создает `mdmm.config.json`, каталоги `docs/`, `shared/`, `dist/` и starter-файлы.
+- `init` поддерживает `--yes`, `--force` и `--no-starter`.
+- Добавлены CLI-тесты на help, version, `init --yes`, `init --yes --no-starter`, защиту от перезаписи без `--force` и placeholder `adopt`.
+- `../../README.md` обновлен под сценарии `npx`, global install и devDependency.

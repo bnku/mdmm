@@ -1,6 +1,6 @@
 # Задача 06. Placeholder для `adopt` и foundation для future retrofit
 
-**Статус:** ⏳ Запланировано
+**Статус:** 🟡 Частично реализовано
 
 ## Цель
 
@@ -72,3 +72,15 @@
 - CLI surface уже сейчас учитывает существование отдельного retrofit-сценария и не смешивает его с `init`.
 - Пользователь не получает ложного впечатления, что `adopt` уже умеет безопасно переписывать документацию.
 - Текущие DX-решения не блокируют будущую реализацию inventory/deduplication/migration flow.
+
+## Что реализовано сейчас
+
+- В `../../src/cli.js` добавлена placeholder-команда `mdmm adopt` без мутаций проекта.
+- Help и `../../README.md` теперь явно различают `init` для greenfield и `adopt` для будущего retrofit flow.
+- Добавлен smoke-тест на placeholder `adopt` и regression-покрытие того, что обычные `init/build/check/report` сценарии не зависят от незавершенной логики retrofit.
+
+## Что еще остается
+
+- Реальный analysis/foundation слой для inventory Mermaid-блоков, duplicate candidates и migration suggestions.
+- Отдельный read-only pipeline `adopt: scan -> inventory -> suggestions`.
+- Формализация reusable analysis primitives поверх текущих `report`, `blocks` и `references`.
