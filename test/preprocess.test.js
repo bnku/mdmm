@@ -510,3 +510,73 @@ test("directory build requires output directory", async () => {
     },
   );
 });
+
+test("directory mode auto-discovers config and applies include/exclude patterns", async () => {
+  const rootDir = await createWorkspace();
+
+  await writeWorkspaceFile(
+    rootDir,
+    "mermaid-include.config.json",
+    `{
+  "include": ["docs/**/*.md"],
+  "exclude": ["docs/generated/**/*.md"]
+}
+`,
+  );
+
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/library.md",
+    `<!-- mermaid:block customer.overview -->
+\`\`\`mermaid
+flowchart TD
+A --> B
+\`\`\`
+<!-- /mermaid:block -->
+`,
+  );
+
+  const docsDir = path.join(rootDir, "docs");
+
+  await writeWorkspaceFile(
+    rootDir,
+    "docs/one.md",
+    `\`\`\`mermaid-include
+../shared/library.md#customer.overview
+\`\`\`
+`,
+  );
+
+  await writeWorkspaceFile(
+    rootDir,
+    "docs/generated/skip-me.md",
+    `\`\`\`mermaid-include
+../missing.md#broken
+\`\`\`
+`,
+  );
+
+  const { stdout } = await execFileAsync(process.execPath, [cliPath, "check", docsDir], {
+    cwd: projectRoot,
+  });
+
+  assert.match(stdout, /OK .*docs\/one\.md/);
+  assert.doesNotMatch(stdout, /skip-me\.md/);
+  assert.match(stdout, /Checked 1 Markdown file\(s\) under/);
+});
+
+test("directory mode rejects invalid config json", async () => {
+  const rootDir = await createWorkspace();
+  const docsDir = path.join(rootDir, "docs");
+
+  await writeWorkspaceFile(rootDir, "mermaid-include.config.json", `{ invalid json`);
+  await writeWorkspaceFile(rootDir, "docs/one.md", `# Empty\n`);
+
+  await assert.rejects(
+    () => execFileAsync(process.execPath, [cliPath, "check", docsDir], { cwd: projectRoot }),
+    (error) => {
+      assert.match(error.stderr, /Invalid JSON in .*mermaid-include\.config\.json/);
+      return true;
+    },
+  );
+});

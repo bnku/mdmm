@@ -1,0 +1,9 @@
+{
+  "include": [
+    "docs/**/*.md"
+  ],
+  "exclude": [
+    "dist/**/*.md",
+    "shared/**/*.md"
+  ]
+}

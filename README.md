@@ -7,6 +7,7 @@
 - `./src/cli.js` — CLI с командами `build` и `check` для файлов и каталогов.
 - `./src/preprocess.js` — ядро препроцессора.
 - `./examples/shared/customer-verification.md` — библиотека канонических Mermaid-блоков.
+- `./examples/mermaid-include.config.json` — пример include/exclude-конфига для bulk-сборки.
 - `./examples/docs/onboarding.md` — пример include целой диаграммы.
 - `./examples/docs/journey.md` — пример include Mermaid-фрагмента внутри диаграммы.
 - `./test/preprocess.test.js` — автоматические тесты на позитивные и негативные сценарии.
@@ -76,27 +77,40 @@ kyc__success --> Done
 - `npm run check:fragment-example` — проверяет fragment include пример.
 - `npm run build:fragment-example` — собирает `./examples/docs/journey.md` в `./examples/dist/journey.md`.
 - `npm run validate:fragment-example` — валидирует собранный fragment include пример.
-- `npm run check:examples` — рекурсивно проверяет весь каталог `./examples/docs`.
-- `npm run build:examples` — рекурсивно собирает весь каталог `./examples/docs` в `./examples/dist`.
+- `npm run check:examples` — рекурсивно проверяет весь каталог `./examples` с учетом конфига.
+- `npm run build:examples` — рекурсивно собирает весь каталог `./examples` в `./examples/dist` с учетом конфига.
 - `npm run validate:examples` — валидирует оба собранных примера.
 
 ## Directory Mode
 
 CLI умеет работать не только с отдельным `.md`, но и с каталогом.
 
+Для bulk-сценария можно положить рядом `mermaid-include.config.json`:
+
+```json
+{
+  "include": ["docs/**/*.md"],
+  "exclude": ["dist/**/*.md", "shared/**/*.md"]
+}
+```
+
+- `include` и `exclude` применяются только в directory mode;
+- конфиг автоматически ищется от входного каталога вверх;
+- паттерны считаются относительно каталога, где лежит конфиг.
+
 Проверка каталога:
 
 ```bash
-node ./src/cli.js check ./examples/docs
+node ./src/cli.js check ./examples
 ```
 
 Сборка каталога с сохранением структуры путей:
 
 ```bash
-node ./src/cli.js build ./examples/docs --output ./examples/dist
+node ./src/cli.js build ./examples --output ./examples/dist
 ```
 
-Если на вход подан каталог, CLI рекурсивно обрабатывает все `.md`-файлы и сохраняет относительные пути в выходном каталоге.
+Если на вход подан каталог, CLI рекурсивно обрабатывает все `.md`-файлы и сохраняет относительные пути в выходном каталоге. Поэтому при сборке `./examples` файлы попадают в `./examples/dist/docs/...`, а не прямо в `./examples/dist/...`.
 
 ## Ограничения текущей версии
 

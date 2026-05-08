@@ -1,9 +1,12 @@
 #!/usr/bin/env node
-import { readdir, stat } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
 import { MermaidIncludeError, preprocessFile } from "./preprocess.js";
+
+const CONFIG_FILE_NAME = "mermaid-include.config.json";
+const DEFAULT_INCLUDE_PATTERNS = ["**/*.md"];
 
 async function main() {
   const argv = process.argv.slice(2);
@@ -56,7 +59,8 @@ async function main() {
 }
 
 async function handleDirectoryCommand(command, inputPath, parsed) {
-  const markdownFiles = await listMarkdownFiles(inputPath);
+  const config = await loadDirectoryConfig(inputPath);
+  const markdownFiles = filterMarkdownFiles(await listMarkdownFiles(inputPath), inputPath, config);
 
   if (command === "build" && !parsed.outputPath) {
     throw new MermaidIncludeError("Directory build requires --output <output-dir>", {
@@ -144,6 +148,103 @@ async function listMarkdownFiles(rootDir) {
   return files;
 }
 
+function filterMarkdownFiles(files, inputPath, config) {
+  const includePatterns = config?.include ?? DEFAULT_INCLUDE_PATTERNS;
+  const excludePatterns = config?.exclude ?? [];
+  const configBaseDir = config?.baseDir ?? inputPath;
+
+  return files.filter((filePath) => {
+    const relativePath = normalizeGlobPath(path.relative(configBaseDir, filePath));
+    const isIncluded = includePatterns.some((pattern) => path.matchesGlob(relativePath, pattern));
+    const isExcluded = excludePatterns.some((pattern) => path.matchesGlob(relativePath, pattern));
+    return isIncluded && !isExcluded;
+  });
+}
+
+async function loadDirectoryConfig(inputPath) {
+  const configPath = await findConfigPath(inputPath);
+  if (!configPath) {
+    return null;
+  }
+
+  let parsedConfig;
+
+  try {
+    parsedConfig = JSON.parse(await readFile(configPath, "utf8"));
+  } catch (error) {
+    throw new MermaidIncludeError(`Invalid JSON in ${path.relative(process.cwd(), configPath)}`, {
+      code: "INVALID_CONFIG",
+      configPath,
+    });
+  }
+
+  if (!parsedConfig || typeof parsedConfig !== "object" || Array.isArray(parsedConfig)) {
+    throw new MermaidIncludeError(`Config ${path.relative(process.cwd(), configPath)} must be a JSON object`, {
+      code: "INVALID_CONFIG",
+      configPath,
+    });
+  }
+
+  const include = normalizePatternList(parsedConfig.include, "include", configPath);
+  const exclude = normalizePatternList(parsedConfig.exclude, "exclude", configPath);
+
+  return {
+    baseDir: path.dirname(configPath),
+    configPath,
+    include,
+    exclude,
+  };
+}
+
+async function findConfigPath(startDir) {
+  let currentDir = startDir;
+
+  while (true) {
+    const candidatePath = path.join(currentDir, CONFIG_FILE_NAME);
+
+    try {
+      const candidateStats = await stat(candidatePath);
+      if (candidateStats.isFile()) {
+        return candidatePath;
+      }
+    } catch (error) {
+      if (!error || error.code !== "ENOENT") {
+        throw error;
+      }
+    }
+
+    const parentDir = path.dirname(currentDir);
+    if (parentDir === currentDir) {
+      return null;
+    }
+
+    currentDir = parentDir;
+  }
+}
+
+function normalizePatternList(value, key, configPath) {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!Array.isArray(value) || value.some((item) => typeof item !== "string" || item.length === 0)) {
+    throw new MermaidIncludeError(
+      `Config field ${key} in ${path.relative(process.cwd(), configPath)} must be an array of non-empty strings`,
+      {
+        code: "INVALID_CONFIG",
+        configPath,
+        key,
+      },
+    );
+  }
+
+  return value.map(normalizeGlobPath);
+}
+
+function normalizeGlobPath(value) {
+  return value.split(path.sep).join("/");
+}
+
 async function statInputPath(inputPath) {
   try {
     return await stat(inputPath);
@@ -166,6 +267,10 @@ function printHelp() {
       "  node ./src/cli.js build <input-dir> --output <output-dir> [--max-include-depth <n>]",
       "  node ./src/cli.js check <input.md> [--max-include-depth <n>]",
       "  node ./src/cli.js check <input-dir> [--max-include-depth <n>]",
+      "",
+      `Config file: ${CONFIG_FILE_NAME}`,
+      "  include/exclude patterns are applied in directory mode",
+      "  config is auto-discovered from the input directory upward",
       "",
       "Commands:",
       "  build  Resolve include directives and write Markdown output",

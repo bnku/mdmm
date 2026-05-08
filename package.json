@@ -11,8 +11,8 @@
     "build:fragment-example": "node ./src/cli.js build ./examples/docs/journey.md --output ./examples/dist/journey.md",
     "check:fragment-example": "node ./src/cli.js check ./examples/docs/journey.md",
     "validate:fragment-example": "node ./scripts/validate-mermaid-cli.js ./examples/dist/journey.md",
-    "build:examples": "node ./src/cli.js build ./examples/docs --output ./examples/dist",
-    "check:examples": "node ./src/cli.js check ./examples/docs",
-    "validate:examples": "node ./scripts/validate-mermaid-cli.js ./examples/dist/onboarding.md ./examples/dist/journey.md"
+    "build:examples": "node ./src/cli.js build ./examples --output ./examples/dist",
+    "check:examples": "node ./src/cli.js check ./examples",
+    "validate:examples": "node ./scripts/validate-mermaid-cli.js ./examples/dist/docs/onboarding.md ./examples/dist/docs/journey.md"
   }
 }
