@@ -128,7 +128,11 @@ async function resolveFragmentIncludesInCode(body, currentFilePath, context, sta
     }
 
     const reference = await resolveReferenceText(directive.referenceText, currentFilePath, "fragment include", context);
-    const fragment = await resolveFragmentBlockReference({ ...reference, args: directive.args }, context, stack);
+    const fragment = await resolveFragmentBlockReference(
+      { ...reference, args: directive.args, invocationFilePath: currentFilePath },
+      context,
+      stack,
+    );
     validateExternalAliasReferences(nonDirectiveBody, directive.alias, fragment.exports, currentFilePath);
     usedAliases.add(directive.alias);
     outputLines.push(rewriteFragmentBody(fragment.body, directive.alias, fragment.nodeIds));

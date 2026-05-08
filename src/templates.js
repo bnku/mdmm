@@ -23,7 +23,7 @@ export function renderTemplate(templateText, args, location) {
 
   return templateText.replace(PLACEHOLDER_PATTERN, (fullMatch, key, defaultValue) => {
     if (Object.hasOwn(args, key)) {
-      return args[key];
+      return normalizeForwardedTemplateArg(args[key], location.invocationFilePath);
     }
 
     if (defaultValue !== undefined) {
@@ -36,6 +36,26 @@ export function renderTemplate(templateText, args, location) {
       blockKey: formatBlockKey(location),
     });
   });
+}
+
+function normalizeForwardedTemplateArg(value, invocationFilePath) {
+  if (!invocationFilePath || typeof value !== "string") {
+    return value;
+  }
+
+  const separatorIndex = value.lastIndexOf("#");
+  if (separatorIndex === -1) {
+    return value;
+  }
+
+  const filePart = value.slice(0, separatorIndex).trim();
+  const blockId = value.slice(separatorIndex + 1).trim();
+
+  if (!blockId || (!filePart.startsWith("./") && !filePart.startsWith("../"))) {
+    return value;
+  }
+
+  return `${path.resolve(path.dirname(invocationFilePath), filePart)}#${blockId}`;
 }
 
 export function normalizeTemplateArgs(args) {

@@ -16,7 +16,7 @@ Nested include с explicit path `fragmentRef`:
 
 ```mermaid-include
 template.wrapper
-fragmentRef = ./customer-templates.md#template.audit-fragment
+fragmentRef = ../shared/customer-templates.md#template.audit-fragment
 reviewer = Legal
 owner = Risk Ops
 ```

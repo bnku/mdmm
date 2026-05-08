@@ -12,6 +12,7 @@ export async function resolveBlockReference(rawReference, currentFilePath, sourc
   return {
     ...reference,
     args: directive.args,
+    invocationFilePath: currentFilePath,
   };
 }
 

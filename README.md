@@ -189,11 +189,11 @@ Explicit path в `fragmentRef` тоже поддерживается:
 
 ````md
 ```mermaid-include
-review.wrapper fragmentRef=./library.md#audit.fragment reviewer=Legal
+review.wrapper fragmentRef=../shared/library.md#audit.fragment reviewer=Legal
 ```
 ````
 
-Важно: если `fragmentRef` содержит `path#block-id`, этот path потом резолвится относительно файла, где объявлен вложенный `%% include`, а не относительно документа, который вызывает внешний шаблон.
+Важно: если `fragmentRef` передан как template arg и содержит relative `path#block-id`, этот path резолвится относительно документа, который вызывает внешний шаблон. При этом default внутри самого шаблона, например `%fragmentRef|./library.md#review.fragment%`, по-прежнему резолвится относительно файла шаблона.
 
 Правила v3:
 

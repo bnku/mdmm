@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-08T20:56:52.714Z",
+  "generatedAt": "2026-05-08T21:08:20.743Z",
   "rootPath": "examples",
   "summary": {
     "fileCount": 5,
@@ -90,7 +90,7 @@
           "blockId": "template.wrapper",
           "alias": null,
           "args": {
-            "fragmentRef": "./customer-templates.md#template.audit-fragment",
+            "fragmentRef": "../shared/customer-templates.md#template.audit-fragment",
             "owner": "Risk Ops",
             "reviewer": "Legal"
           }
@@ -257,7 +257,7 @@
           "alias": null,
           "reference": "template.wrapper",
           "args": {
-            "fragmentRef": "./customer-templates.md#template.audit-fragment",
+            "fragmentRef": "../shared/customer-templates.md#template.audit-fragment",
             "owner": "Risk Ops",
             "reviewer": "Legal"
           }

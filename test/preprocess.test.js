@@ -489,7 +489,49 @@ lane__done --> End
     rootDir,
     "docs/process.md",
     `\`\`\`mermaid-include
-review.wrapper fragmentRef=./library.md#review.fragment reviewer=Legal owner="Risk Ops"
+review.wrapper fragmentRef=../shared/library.md#review.fragment reviewer=Legal owner="Risk Ops"
+\`\`\`
+`,
+  );
+
+  const output = await preprocessFile(inputPath, undefined, { cwd: rootDir });
+
+  assert.match(output, /lane__entry\["Review Risk Ops: Legal"\]/);
+  assert.match(output, /lane__done\["Done"\]/);
+});
+
+test("keeps default explicit path references relative to the template file", async () => {
+  const rootDir = await createWorkspace();
+
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/library.md",
+    `<!-- mermaid:block review.fragment type=fragment exports=entry,done -->
+\`\`\`mermaid
+flowchart TD
+entry["Review %owner|Sales Ops%: %reviewer|Finance%"]
+entry --> done["Done"]
+\`\`\`
+<!-- /mermaid:block -->
+
+<!-- mermaid:block review.wrapper -->
+\`\`\`mermaid
+flowchart LR
+Start --> lane__entry
+%% include: %fragmentRef|./library.md#review.fragment% as lane
+%% reviewer = %reviewer|Finance%
+%% owner = %owner|Sales Ops%
+lane__done --> End
+\`\`\`
+<!-- /mermaid:block -->
+`,
+  );
+
+  const inputPath = await writeWorkspaceFile(
+    rootDir,
+    "docs/process.md",
+    `\`\`\`mermaid-include
+review.wrapper reviewer=Legal owner="Risk Ops"
 \`\`\`
 `,
   );
