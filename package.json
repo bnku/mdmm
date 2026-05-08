@@ -1,0 +1,18 @@
+{
+  "name": "mm-test",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "build:example": "node ./src/cli.js build ./examples/docs/onboarding.md --output ./examples/dist/onboarding.md",
+    "check:example": "node ./src/cli.js check ./examples/docs/onboarding.md",
+    "validate:example": "node ./scripts/validate-mermaid-cli.js ./examples/dist/onboarding.md",
+    "build:fragment-example": "node ./src/cli.js build ./examples/docs/journey.md --output ./examples/dist/journey.md",
+    "check:fragment-example": "node ./src/cli.js check ./examples/docs/journey.md",
+    "validate:fragment-example": "node ./scripts/validate-mermaid-cli.js ./examples/dist/journey.md",
+    "build:examples": "node ./src/cli.js build ./examples/docs --output ./examples/dist",
+    "check:examples": "node ./src/cli.js check ./examples/docs",
+    "validate:examples": "node ./scripts/validate-mermaid-cli.js ./examples/dist/onboarding.md ./examples/dist/journey.md"
+  }
+}
