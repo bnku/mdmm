@@ -310,6 +310,278 @@ Base --> Done
   assert.match(output, /Base --> Done/);
 });
 
+test("builds whole-diagram templates with inline and multiline arguments", async () => {
+  const rootDir = await createWorkspace();
+
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/library.md",
+    `<!-- mermaid:block customer.overview -->
+\`\`\`mermaid
+flowchart TD
+start([Start]) --> owner["%owner%"]
+owner --> review{"Review by %reviewer|Finance%?"}
+review -->|Escalate| escalator["%escalator|Head of Operations%"]
+escalator --> done([Done])
+\`\`\`
+<!-- /mermaid:block -->
+`,
+  );
+
+  const inputPath = await writeWorkspaceFile(
+    rootDir,
+    "docs/process.md",
+    `# Process
+
+\`\`\`mermaid-include
+customer.overview owner="Risk Ops" reviewer=Legal
+\`\`\`
+
+\`\`\`mermaid-include
+customer.overview
+owner = Sales Ops
+escalator = Finance Lead
+\`\`\`
+`,
+  );
+
+  const output = await preprocessFile(inputPath, undefined, { cwd: rootDir });
+
+  assert.match(output, /owner\["Risk Ops"\]/);
+  assert.match(output, /review\{"Review by Legal\?"\}/);
+  assert.match(output, /owner\["Sales Ops"\]/);
+  assert.match(output, /escalator\["Finance Lead"\]/);
+  assert.match(output, /review\{"Review by Finance\?"\}/);
+});
+
+test("builds fragment templates with inline and multiline arguments", async () => {
+  const rootDir = await createWorkspace();
+
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/fragments.md",
+    `<!-- mermaid:block customer.fragment type=fragment exports=entry,done -->
+\`\`\`mermaid
+flowchart TD
+entry["%owner|Sales Ops%"]
+entry --> review{"Review by %reviewer|Finance%?"}
+review --> done["Done for %owner|Sales Ops%"]
+\`\`\`
+<!-- /mermaid:block -->
+`,
+  );
+
+  const inputPath = await writeWorkspaceFile(
+    rootDir,
+    "docs/journey.md",
+    `\`\`\`mermaid
+flowchart LR
+Start --> risk__entry
+%% include: customer.fragment as risk owner="Risk Ops" reviewer=Legal
+risk__done --> End
+Start --> ops__entry
+%% include: customer.fragment as ops
+%% owner = Sales Ops
+%% reviewer = Finance
+ops__done --> End2
+\`\`\`
+`,
+  );
+
+  const output = await preprocessFile(inputPath, undefined, { cwd: rootDir });
+
+  assert.match(output, /risk__entry\["Risk Ops"\]/);
+  assert.match(output, /risk__review\{"Review by Legal\?"\}/);
+  assert.match(output, /ops__entry\["Sales Ops"\]/);
+  assert.match(output, /ops__review\{"Review by Finance\?"\}/);
+  assert.doesNotMatch(output, /%% owner =/);
+});
+
+test("supports nested templated includes and forwarded reference arguments", async () => {
+  const rootDir = await createWorkspace();
+
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/library.md",
+    `<!-- mermaid:block review.fragment type=fragment exports=entry,done -->
+\`\`\`mermaid
+flowchart TD
+entry["Review: %reviewer|Finance%"]
+entry --> done["Done"]
+\`\`\`
+<!-- /mermaid:block -->
+
+<!-- mermaid:block audit.fragment type=fragment exports=entry,done -->
+\`\`\`mermaid
+flowchart TD
+entry["Audit: %reviewer|Finance%"]
+entry --> done["Closed"]
+\`\`\`
+<!-- /mermaid:block -->
+
+<!-- mermaid:block review.wrapper -->
+\`\`\`mermaid
+flowchart LR
+Start --> lane__entry
+%% include: %fragmentRef|review.fragment% as lane
+%% reviewer = %reviewer|Finance%
+lane__done --> End
+\`\`\`
+<!-- /mermaid:block -->
+`,
+  );
+
+  const inputPath = await writeWorkspaceFile(
+    rootDir,
+    "docs/process.md",
+    `\`\`\`mermaid-include
+review.wrapper fragmentRef=audit.fragment reviewer=Legal
+\`\`\`
+`,
+  );
+
+  const output = await preprocessFile(inputPath, undefined, { cwd: rootDir });
+
+  assert.match(output, /lane__entry\["Audit: Legal"\]/);
+  assert.match(output, /lane__done\["Closed"\]/);
+});
+
+test("supports nested templated includes with explicit path reference arguments", async () => {
+  const rootDir = await createWorkspace();
+
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/library.md",
+    `<!-- mermaid:block review.fragment type=fragment exports=entry,done -->
+\`\`\`mermaid
+flowchart TD
+entry["Review %owner|Sales Ops%: %reviewer|Finance%"]
+entry --> done["Done"]
+\`\`\`
+<!-- /mermaid:block -->
+
+<!-- mermaid:block review.wrapper -->
+\`\`\`mermaid
+flowchart LR
+Start --> lane__entry
+%% include: %fragmentRef|./library.md#review.fragment% as lane
+%% reviewer = %reviewer|Finance%
+%% owner = %owner|Sales Ops%
+lane__done --> End
+\`\`\`
+<!-- /mermaid:block -->
+`,
+  );
+
+  const inputPath = await writeWorkspaceFile(
+    rootDir,
+    "docs/process.md",
+    `\`\`\`mermaid-include
+review.wrapper fragmentRef=./library.md#review.fragment reviewer=Legal owner="Risk Ops"
+\`\`\`
+`,
+  );
+
+  const output = await preprocessFile(inputPath, undefined, { cwd: rootDir });
+
+  assert.match(output, /lane__entry\["Review Risk Ops: Legal"\]/);
+  assert.match(output, /lane__done\["Done"\]/);
+});
+
+test("fails when required template argument is missing", async () => {
+  const rootDir = await createWorkspace();
+
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/library.md",
+    `<!-- mermaid:block customer.overview -->
+\`\`\`mermaid
+flowchart TD
+A["%owner%"] --> B[Done]
+\`\`\`
+<!-- /mermaid:block -->
+`,
+  );
+
+  const inputPath = await writeWorkspaceFile(
+    rootDir,
+    "docs/process.md",
+    `\`\`\`mermaid-include
+customer.overview
+\`\`\`
+`,
+  );
+
+  await assert.rejects(() => preprocessFile(inputPath, undefined, { cwd: rootDir }), (error) => {
+    assert.ok(error instanceof MermaidIncludeError);
+    assert.equal(error.details.code, "MISSING_TEMPLATE_ARG");
+    return true;
+  });
+});
+
+test("fails when template include receives unknown argument", async () => {
+  const rootDir = await createWorkspace();
+
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/library.md",
+    `<!-- mermaid:block customer.overview -->
+\`\`\`mermaid
+flowchart TD
+A["%owner%"] --> B[Done]
+\`\`\`
+<!-- /mermaid:block -->
+`,
+  );
+
+  const inputPath = await writeWorkspaceFile(
+    rootDir,
+    "docs/process.md",
+    `\`\`\`mermaid-include
+customer.overview owner="Risk Ops" reviewer=Legal
+\`\`\`
+`,
+  );
+
+  await assert.rejects(() => preprocessFile(inputPath, undefined, { cwd: rootDir }), (error) => {
+    assert.ok(error instanceof MermaidIncludeError);
+    assert.equal(error.details.code, "UNKNOWN_TEMPLATE_ARG");
+    return true;
+  });
+});
+
+test("fails when template argument is declared twice", async () => {
+  const rootDir = await createWorkspace();
+
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/library.md",
+    `<!-- mermaid:block customer.overview -->
+\`\`\`mermaid
+flowchart TD
+A["%owner%"] --> B[Done]
+\`\`\`
+<!-- /mermaid:block -->
+`,
+  );
+
+  const inputPath = await writeWorkspaceFile(
+    rootDir,
+    "docs/process.md",
+    `\`\`\`mermaid-include
+customer.overview owner="Risk Ops"
+owner = Sales Ops
+\`\`\`
+`,
+  );
+
+  await assert.rejects(() => preprocessFile(inputPath, undefined, { cwd: rootDir }), (error) => {
+    assert.ok(error instanceof MermaidIncludeError);
+    assert.equal(error.details.code, "DUPLICATE_TEMPLATE_ARG");
+    return true;
+  });
+});
+
 test("builds mermaid diagram with fragment include and alias rewrite", async () => {
   const rootDir = await createWorkspace();
 
@@ -798,6 +1070,65 @@ kyc__success --> Done
   assert.equal(report.files[0].dependencies[0].type, "diagram");
   assert.equal(report.files[0].dependencies[1].type, "fragment");
   assert.equal(report.files[0].dependencies[1].alias, "kyc");
+});
+
+test("report command includes template arguments for diagram and fragment dependencies", async () => {
+  const rootDir = await createWorkspace();
+
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/library.md",
+    `<!-- mermaid:block customer.overview -->
+\`\`\`mermaid
+flowchart TD
+owner["%owner%"] --> review["%reviewer|Finance%"]
+\`\`\`
+<!-- /mermaid:block -->
+
+<!-- mermaid:block customer.fragment type=fragment exports=entry,done -->
+\`\`\`mermaid
+flowchart TD
+entry["%owner|Sales Ops%"]
+entry --> done["Done"]
+\`\`\`
+<!-- /mermaid:block -->
+`,
+  );
+
+  const inputPath = await writeWorkspaceFile(
+    rootDir,
+    "docs/journey.md",
+    `# Journey
+
+\`\`\`mermaid-include
+customer.overview owner="Risk Ops" reviewer=Legal
+\`\`\`
+
+\`\`\`mermaid
+flowchart LR
+Start --> kyc__entry
+%% include: customer.fragment as kyc
+%% owner = Sales Ops
+kyc__done --> Done
+\`\`\`
+`,
+  );
+
+  const { stdout } = await execFileAsync(process.execPath, [cliPath, "report", inputPath], {
+    cwd: rootDir,
+  });
+
+  const report = JSON.parse(stdout);
+  assert.deepEqual(report.files[0].dependencies[0].args, {
+    owner: "Risk Ops",
+    reviewer: "Legal",
+  });
+  assert.deepEqual(report.files[0].dependencies[1].args, {
+    owner: "Sales Ops",
+  });
+  assert.deepEqual(report.blocks[0].usedBy[0].args, {
+    owner: "Sales Ops",
+  });
 });
 
 test("report command ignores shared and output directories when run from project root", async () => {

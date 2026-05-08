@@ -2,11 +2,13 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { MermaidIncludeError } from "./errors.js";
+import { parseFragmentIncludeDirectiveGroup } from "./include-parser.js";
 import { loadProjectSettings } from "./project.js";
 import { resolveBlockReference, resolveReferenceText } from "./references.js";
+import { normalizeTemplateArgs } from "./templates.js";
 
 const WHOLE_INCLUDE_PATTERN = /```mermaid-include[^\n]*\r?\n([\s\S]*?)\r?\n```/g;
-const FRAGMENT_INCLUDE_PATTERN = /^\s*%%\s*include:\s+(\S+)(?:\s+as\s+([A-Za-z][A-Za-z0-9_-]*))?\s*$/gm;
+const MERMAID_FENCE_PATTERN = /```mermaid(?!-)([^\n]*)\r?\n([\s\S]*?)\r?\n```/g;
 
 export async function buildDependencyReport(filePaths, options = {}) {
   const cwd = options.cwd ?? process.cwd();
@@ -44,6 +46,7 @@ export async function buildDependencyReport(filePaths, options = {}) {
         type: dependency.type,
         alias: dependency.alias ?? null,
         reference: dependency.reference,
+        args: dependency.args,
       });
     }
   }
@@ -85,27 +88,31 @@ export async function collectFileDependencies(markdown, currentFilePath, context
       resolvedFilePath: reference.filePath,
       blockId: reference.blockId,
       alias: null,
+      args: normalizeTemplateArgs(reference.args ?? {}),
     });
   }
 
-  for (const match of markdown.matchAll(FRAGMENT_INCLUDE_PATTERN)) {
-    if (!match[2]) {
-      throw new MermaidIncludeError(
-        `Fragment include is missing alias in ${path.relative(process.cwd(), currentFilePath)}: ${match[0].trim()}`,
-        {
-          code: "MISSING_ALIAS",
-        },
-      );
-    }
+  for (const match of markdown.matchAll(MERMAID_FENCE_PATTERN)) {
+    const body = match[2];
+    const lines = body.split(/\r?\n/);
 
-    const reference = await resolveReferenceText(match[1], currentFilePath, "fragment include", context);
-    dependencies.push({
-      type: "fragment",
-      reference: reference.referenceText,
-      resolvedFilePath: reference.filePath,
-      blockId: reference.blockId,
-      alias: match[2],
-    });
+    for (let index = 0; index < lines.length; index += 1) {
+      const directive = parseFragmentIncludeDirectiveGroup(lines, index, currentFilePath);
+      if (!directive) {
+        continue;
+      }
+
+      const reference = await resolveReferenceText(directive.referenceText, currentFilePath, "fragment include", context);
+      dependencies.push({
+        type: "fragment",
+        reference: reference.referenceText,
+        resolvedFilePath: reference.filePath,
+        blockId: reference.blockId,
+        alias: directive.alias,
+        args: normalizeTemplateArgs(directive.args),
+      });
+      index += directive.consumedLineCount - 1;
+    }
   }
 
   return dependencies;
@@ -118,6 +125,7 @@ function formatDependency(dependency, cwd) {
     target: path.relative(cwd, dependency.resolvedFilePath),
     blockId: dependency.blockId,
     alias: dependency.alias,
+    args: dependency.args,
   };
 }
 async function readUtf8(filePath) {

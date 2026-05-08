@@ -1,0 +1,296 @@
+{
+  "generatedAt": "2026-05-08T19:55:18.240Z",
+  "rootPath": "examples",
+  "summary": {
+    "fileCount": 5,
+    "dependencyCount": 11,
+    "blockCount": 6
+  },
+  "files": [
+    {
+      "path": "examples/docs/fragment-include.md",
+      "dependencyCount": 2,
+      "dependencies": [
+        {
+          "type": "fragment",
+          "reference": "verification-fragment.fragment",
+          "target": "examples/shared/verification-fragment.md",
+          "blockId": "verification-fragment.fragment",
+          "alias": "kyc",
+          "args": {}
+        },
+        {
+          "type": "fragment",
+          "reference": "../shared/verification-fragment.md#verification-fragment.fragment",
+          "target": "examples/shared/verification-fragment.md",
+          "blockId": "verification-fragment.fragment",
+          "alias": "explicit",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "path": "examples/docs/template-fragment.md",
+      "dependencyCount": 2,
+      "dependencies": [
+        {
+          "type": "fragment",
+          "reference": "template.verification-fragment",
+          "target": "examples/shared/customer-templates.md",
+          "blockId": "template.verification-fragment",
+          "alias": "risk",
+          "args": {
+            "owner": "Risk Ops",
+            "reviewer": "Legal"
+          }
+        },
+        {
+          "type": "fragment",
+          "reference": "../shared/customer-templates.md#template.verification-fragment",
+          "target": "examples/shared/customer-templates.md",
+          "blockId": "template.verification-fragment",
+          "alias": "ops",
+          "args": {
+            "owner": "Sales Ops",
+            "reviewer": "Finance"
+          }
+        }
+      ]
+    },
+    {
+      "path": "examples/docs/template-nested.md",
+      "dependencyCount": 2,
+      "dependencies": [
+        {
+          "type": "diagram",
+          "reference": "template.wrapper",
+          "target": "examples/shared/customer-templates.md",
+          "blockId": "template.wrapper",
+          "alias": null,
+          "args": {
+            "fragmentRef": "template.audit-fragment",
+            "reviewer": "Legal"
+          }
+        },
+        {
+          "type": "diagram",
+          "reference": "template.wrapper",
+          "target": "examples/shared/customer-templates.md",
+          "blockId": "template.wrapper",
+          "alias": null,
+          "args": {
+            "fragmentRef": "./customer-templates.md#template.verification-fragment",
+            "owner": "Risk Ops",
+            "reviewer": "Legal"
+          }
+        }
+      ]
+    },
+    {
+      "path": "examples/docs/template-whole.md",
+      "dependencyCount": 3,
+      "dependencies": [
+        {
+          "type": "diagram",
+          "reference": "template.customer-overview",
+          "target": "examples/shared/customer-templates.md",
+          "blockId": "template.customer-overview",
+          "alias": null,
+          "args": {
+            "owner": "Risk Ops",
+            "reviewer": "Legal"
+          }
+        },
+        {
+          "type": "diagram",
+          "reference": "template.customer-overview",
+          "target": "examples/shared/customer-templates.md",
+          "blockId": "template.customer-overview",
+          "alias": null,
+          "args": {
+            "escalator": "Head of Operations",
+            "owner": "Sales Ops"
+          }
+        },
+        {
+          "type": "diagram",
+          "reference": "../shared/customer-templates.md#template.customer-overview",
+          "target": "examples/shared/customer-templates.md",
+          "blockId": "template.customer-overview",
+          "alias": null,
+          "args": {
+            "escalator": "COO",
+            "owner": "Customer Success",
+            "reviewer": "Compliance"
+          }
+        }
+      ]
+    },
+    {
+      "path": "examples/docs/whole-include.md",
+      "dependencyCount": 2,
+      "dependencies": [
+        {
+          "type": "diagram",
+          "reference": "customer-verification.overview",
+          "target": "examples/shared/customer-verification.md",
+          "blockId": "customer-verification.overview",
+          "alias": null,
+          "args": {}
+        },
+        {
+          "type": "diagram",
+          "reference": "../shared/customer-verification.md#customer-verification.short",
+          "target": "examples/shared/customer-verification.md",
+          "blockId": "customer-verification.short",
+          "alias": null,
+          "args": {}
+        }
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "target": "examples/shared/customer-templates.md",
+      "blockId": "template.customer-overview",
+      "useCount": 3,
+      "usedBy": [
+        {
+          "path": "examples/docs/template-whole.md",
+          "type": "diagram",
+          "alias": null,
+          "reference": "../shared/customer-templates.md#template.customer-overview",
+          "args": {
+            "escalator": "COO",
+            "owner": "Customer Success",
+            "reviewer": "Compliance"
+          }
+        },
+        {
+          "path": "examples/docs/template-whole.md",
+          "type": "diagram",
+          "alias": null,
+          "reference": "template.customer-overview",
+          "args": {
+            "owner": "Risk Ops",
+            "reviewer": "Legal"
+          }
+        },
+        {
+          "path": "examples/docs/template-whole.md",
+          "type": "diagram",
+          "alias": null,
+          "reference": "template.customer-overview",
+          "args": {
+            "escalator": "Head of Operations",
+            "owner": "Sales Ops"
+          }
+        }
+      ]
+    },
+    {
+      "target": "examples/shared/customer-templates.md",
+      "blockId": "template.verification-fragment",
+      "useCount": 2,
+      "usedBy": [
+        {
+          "path": "examples/docs/template-fragment.md",
+          "type": "fragment",
+          "alias": "ops",
+          "reference": "../shared/customer-templates.md#template.verification-fragment",
+          "args": {
+            "owner": "Sales Ops",
+            "reviewer": "Finance"
+          }
+        },
+        {
+          "path": "examples/docs/template-fragment.md",
+          "type": "fragment",
+          "alias": "risk",
+          "reference": "template.verification-fragment",
+          "args": {
+            "owner": "Risk Ops",
+            "reviewer": "Legal"
+          }
+        }
+      ]
+    },
+    {
+      "target": "examples/shared/customer-templates.md",
+      "blockId": "template.wrapper",
+      "useCount": 2,
+      "usedBy": [
+        {
+          "path": "examples/docs/template-nested.md",
+          "type": "diagram",
+          "alias": null,
+          "reference": "template.wrapper",
+          "args": {
+            "fragmentRef": "template.audit-fragment",
+            "reviewer": "Legal"
+          }
+        },
+        {
+          "path": "examples/docs/template-nested.md",
+          "type": "diagram",
+          "alias": null,
+          "reference": "template.wrapper",
+          "args": {
+            "fragmentRef": "./customer-templates.md#template.verification-fragment",
+            "owner": "Risk Ops",
+            "reviewer": "Legal"
+          }
+        }
+      ]
+    },
+    {
+      "target": "examples/shared/customer-verification.md",
+      "blockId": "customer-verification.overview",
+      "useCount": 1,
+      "usedBy": [
+        {
+          "path": "examples/docs/whole-include.md",
+          "type": "diagram",
+          "alias": null,
+          "reference": "customer-verification.overview",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "target": "examples/shared/customer-verification.md",
+      "blockId": "customer-verification.short",
+      "useCount": 1,
+      "usedBy": [
+        {
+          "path": "examples/docs/whole-include.md",
+          "type": "diagram",
+          "alias": null,
+          "reference": "../shared/customer-verification.md#customer-verification.short",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "target": "examples/shared/verification-fragment.md",
+      "blockId": "verification-fragment.fragment",
+      "useCount": 2,
+      "usedBy": [
+        {
+          "path": "examples/docs/fragment-include.md",
+          "type": "fragment",
+          "alias": "explicit",
+          "reference": "../shared/verification-fragment.md#verification-fragment.fragment",
+          "args": {}
+        },
+        {
+          "path": "examples/docs/fragment-include.md",
+          "type": "fragment",
+          "alias": "kyc",
+          "reference": "verification-fragment.fragment",
+          "args": {}
+        }
+      ]
+    }
+  ]
+}

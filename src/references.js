@@ -4,23 +4,15 @@ import process from "node:process";
 
 import { extractBlocks } from "./blocks.js";
 import { MermaidIncludeError } from "./errors.js";
+import { parseWholeIncludeDirective } from "./include-parser.js";
 
 export async function resolveBlockReference(rawReference, currentFilePath, sourceName, context) {
-  const lines = rawReference
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  if (lines.length !== 1) {
-    throw new MermaidIncludeError(
-      `Each ${sourceName} block must contain exactly one non-empty reference in ${path.relative(process.cwd(), currentFilePath)}`,
-      {
-        code: "INVALID_INCLUDE_DIRECTIVE",
-      },
-    );
-  }
-
-  return resolveReferenceText(lines[0], currentFilePath, sourceName, context);
+  const directive = parseWholeIncludeDirective(rawReference, currentFilePath, sourceName);
+  const reference = await resolveReferenceText(directive.referenceText, currentFilePath, sourceName, context);
+  return {
+    ...reference,
+    args: directive.args,
+  };
 }
 
 export async function resolveReferenceText(referenceText, currentFilePath, sourceName, context) {

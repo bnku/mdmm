@@ -24,15 +24,9 @@
   ],
   "scripts": {
     "test": "node --test",
-    "build:example": "./bin/mermaid-include-sync.js build ./examples/docs/onboarding.md --output ./examples/dist/onboarding.md",
-    "check:example": "./bin/mermaid-include-sync.js check ./examples/docs/onboarding.md",
-    "validate:example": "node ./scripts/validate-mermaid-cli.js ./examples/dist/onboarding.md",
-    "build:fragment-example": "./bin/mermaid-include-sync.js build ./examples/docs/journey.md --output ./examples/dist/journey.md",
-    "check:fragment-example": "./bin/mermaid-include-sync.js check ./examples/docs/journey.md",
-    "validate:fragment-example": "node ./scripts/validate-mermaid-cli.js ./examples/dist/journey.md",
     "build:examples": "./bin/mermaid-include-sync.js build ./examples --output ./examples/dist",
     "check:examples": "./bin/mermaid-include-sync.js check ./examples",
-    "validate:examples": "node ./scripts/validate-mermaid-cli.js ./examples/dist/docs/onboarding.md ./examples/dist/docs/journey.md",
+    "validate:examples": "node ./scripts/validate-mermaid-cli.js ./examples/dist/docs/whole-include.md ./examples/dist/docs/fragment-include.md ./examples/dist/docs/template-whole.md ./examples/dist/docs/template-fragment.md ./examples/dist/docs/template-nested.md",
     "report:examples": "./bin/mermaid-include-sync.js report ./examples --output ./examples/dist/dependencies.json",
     "smoke:bin": "./bin/mermaid-include-sync.js --help",
     "pack:dry-run": "npm pack --dry-run"

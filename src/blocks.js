@@ -29,8 +29,8 @@ export function extractBlocks(markdown, filePath) {
       type: attributes.type ?? "diagram",
       exports: attributes.exports ?? [],
       rawContent,
-      resolvedDiagramContent: null,
-      resolvedFragment: null,
+      resolvedDiagramContent: new Map(),
+      resolvedFragment: new Map(),
     });
   }
 

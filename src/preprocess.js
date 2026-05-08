@@ -3,12 +3,13 @@ import path from "node:path";
 
 import { extractBlocks } from "./blocks.js";
 import { MermaidIncludeError } from "./errors.js";
+import { parseFragmentIncludeDirectiveGroup } from "./include-parser.js";
 import { loadProjectSettings } from "./project.js";
 import { resolveBlockReference, resolveReferenceText } from "./references.js";
+import { normalizeTemplateArgs, renderTemplate } from "./templates.js";
 
 const INCLUDE_BLOCK_PATTERN = /```mermaid-include[^\n]*\r?\n([\s\S]*?)\r?\n```/g;
 const MERMAID_FENCE_PATTERN = /```mermaid(?!-)([^\n]*)\r?\n([\s\S]*?)\r?\n```/g;
-const FRAGMENT_INCLUDE_PATTERN = /^\s*%%\s*include:\s+(\S+)(?:\s+as\s+([A-Za-z][A-Za-z0-9_-]*))?\s*$/;
 const MERMAID_INCLUDE_SENTINEL = "```mermaid-include";
 const FRAGMENT_INCLUDE_SENTINEL = /(^|\n)\s*%%\s*include:/m;
 
@@ -60,25 +61,29 @@ async function resolveMarkdown(markdown, currentFilePath, context, stack) {
 
 async function resolveDiagramBlockReference(reference, context, stack) {
   const block = await getBlock(reference, context, "diagram");
+  const invocationKey = getInvocationCacheKey(reference.args ?? {});
 
-  if (!block.resolvedDiagramContent) {
+  if (!block.resolvedDiagramContent.has(invocationKey)) {
     const nextStack = pushBlockToStack(reference, stack, context.maxIncludeDepth);
-    const expanded = await resolveMarkdown(block.rawContent, reference.filePath, context, nextStack);
+    const renderedContent = renderTemplate(block.rawContent, reference.args ?? {}, reference);
+    const expanded = await resolveMarkdown(renderedContent, reference.filePath, context, nextStack);
     const trimmedExpanded = expanded.trim();
     extractFence(trimmedExpanded, "mermaid", reference.filePath, reference.blockId);
     assertNoUnresolvedDirectives(trimmedExpanded, reference.filePath, reference.blockId);
-    block.resolvedDiagramContent = trimmedExpanded;
+    block.resolvedDiagramContent.set(invocationKey, trimmedExpanded);
   }
 
-  return block.resolvedDiagramContent;
+  return block.resolvedDiagramContent.get(invocationKey);
 }
 
 async function resolveFragmentBlockReference(reference, context, stack) {
   const block = await getBlock(reference, context, "fragment");
+  const invocationKey = getInvocationCacheKey(reference.args ?? {});
 
-  if (!block.resolvedFragment) {
+  if (!block.resolvedFragment.has(invocationKey)) {
     const nextStack = pushBlockToStack(reference, stack, context.maxIncludeDepth);
-    const fragmentBody = extractFragmentBody(block.rawContent.trim(), reference.filePath, reference.blockId);
+    const renderedContent = renderTemplate(block.rawContent, reference.args ?? {}, reference);
+    const fragmentBody = extractFragmentBody(renderedContent.trim(), reference.filePath, reference.blockId);
     const resolvedBody = await resolveFragmentIncludesInCode(fragmentBody, reference.filePath, context, nextStack);
     const trimmedBody = resolvedBody.trim();
 
@@ -87,24 +92,25 @@ async function resolveFragmentBlockReference(reference, context, stack) {
     const nodeIds = extractDefinedNodeIds(trimmedBody);
     validateExports(block, nodeIds, reference);
 
-    block.resolvedFragment = {
+    block.resolvedFragment.set(invocationKey, {
       body: trimmedBody,
       nodeIds,
       exports: block.exports,
-    };
+    });
   }
 
-  return block.resolvedFragment;
+  return block.resolvedFragment.get(invocationKey);
 }
 
 async function resolveFragmentIncludesInCode(body, currentFilePath, context, stack) {
   const lines = body.split(/\r?\n/);
-  const nonDirectiveBody = lines.filter((line) => !line.trim().startsWith("%% include:")).join("\n");
+  const nonDirectiveBody = lines.filter((line) => !line.trim().startsWith("%%")).join("\n");
   const usedAliases = new Set();
   const outputLines = [];
 
-  for (const line of lines) {
-    const directive = parseFragmentIncludeDirective(line, currentFilePath);
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const directive = parseFragmentIncludeDirectiveGroup(lines, index, currentFilePath);
 
     if (!directive) {
       outputLines.push(line);
@@ -122,10 +128,11 @@ async function resolveFragmentIncludesInCode(body, currentFilePath, context, sta
     }
 
     const reference = await resolveReferenceText(directive.referenceText, currentFilePath, "fragment include", context);
-    const fragment = await resolveFragmentBlockReference(reference, context, stack);
+    const fragment = await resolveFragmentBlockReference({ ...reference, args: directive.args }, context, stack);
     validateExternalAliasReferences(nonDirectiveBody, directive.alias, fragment.exports, currentFilePath);
     usedAliases.add(directive.alias);
     outputLines.push(rewriteFragmentBody(fragment.body, directive.alias, fragment.nodeIds));
+    index += directive.consumedLineCount - 1;
   }
 
   return outputLines.join("\n");
@@ -170,38 +177,6 @@ async function loadFileRecord(filePath, context) {
   const record = { markdown, blocks };
   context.fileCache.set(filePath, record);
   return record;
-}
-
-function parseFragmentIncludeDirective(line, currentFilePath) {
-  const trimmed = line.trim();
-
-  if (!trimmed.startsWith("%% include:")) {
-    return null;
-  }
-
-  const match = trimmed.match(FRAGMENT_INCLUDE_PATTERN);
-  if (!match) {
-    throw new MermaidIncludeError(
-      `Invalid fragment include directive in ${path.relative(process.cwd(), currentFilePath)}: ${trimmed}`,
-      {
-        code: "INVALID_FRAGMENT_INCLUDE_DIRECTIVE",
-      },
-    );
-  }
-
-  if (!match[2]) {
-    throw new MermaidIncludeError(
-      `Fragment include is missing alias in ${path.relative(process.cwd(), currentFilePath)}: ${trimmed}`,
-      {
-        code: "MISSING_ALIAS",
-      },
-    );
-  }
-
-  return {
-    referenceText: match[1],
-    alias: match[2],
-  };
 }
 
 function validateExports(block, nodeIds, reference) {
@@ -465,6 +440,10 @@ function formatReference(reference) {
 
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function getInvocationCacheKey(args) {
+  return JSON.stringify(normalizeTemplateArgs(args));
 }
 
 function isIdentifierStart(character) {
