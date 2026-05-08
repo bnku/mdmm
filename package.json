@@ -1,11 +1,11 @@
 {
-  "name": "mermaid-include-sync",
+  "name": "mdmm",
   "version": "0.1.0",
-  "description": "CLI for reusable Mermaid includes in Markdown documentation",
+  "description": "MDMM CLI for reusable Mermaid includes in Markdown documentation",
   "license": "UNLICENSED",
   "type": "module",
   "bin": {
-    "mermaid-include-sync": "./bin/mermaid-include-sync.js"
+    "mdmm": "./bin/mdmm.js"
   },
   "files": [
     "bin/",
@@ -16,6 +16,7 @@
     "node": ">=22.0.0"
   },
   "keywords": [
+    "mdmm",
     "mermaid",
     "markdown",
     "documentation",
@@ -24,11 +25,11 @@
   ],
   "scripts": {
     "test": "node --test",
-    "build:examples": "./bin/mermaid-include-sync.js build ./examples --output ./examples/dist",
-    "check:examples": "./bin/mermaid-include-sync.js check ./examples",
+    "build:examples": "./bin/mdmm.js build ./examples --output ./examples/dist",
+    "check:examples": "./bin/mdmm.js check ./examples",
     "validate:examples": "node ./scripts/validate-mermaid-cli.js ./examples/dist/docs/whole-include.md ./examples/dist/docs/fragment-include.md ./examples/dist/docs/template-whole.md ./examples/dist/docs/template-fragment.md ./examples/dist/docs/template-nested.md",
-    "report:examples": "./bin/mermaid-include-sync.js report ./examples --output ./examples/dist/dependencies.json",
-    "smoke:bin": "./bin/mermaid-include-sync.js --help",
+    "report:examples": "./bin/mdmm.js report ./examples --output ./examples/dist/dependencies.json",
+    "smoke:bin": "./bin/mdmm.js --help",
     "pack:dry-run": "npm pack --dry-run"
   }
 }

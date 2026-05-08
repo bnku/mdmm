@@ -4,7 +4,7 @@ import process from "node:process";
 
 import { MermaidIncludeError } from "./errors.js";
 
-export const CONFIG_FILE_NAME = "mermaid-include.config.json";
+export const CONFIG_FILE_NAME = "mdmm.config.json";
 
 const DEFAULT_DOCS_DIR = "docs";
 const DEFAULT_SHARED_DIR = "shared";

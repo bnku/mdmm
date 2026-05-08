@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-05-08T19:55:18.240Z",
+  "generatedAt": "2026-05-08T20:08:42.086Z",
   "rootPath": "examples",
   "summary": {
     "fileCount": 5,
-    "dependencyCount": 11,
+    "dependencyCount": 12,
     "blockCount": 6
   },
   "files": [
@@ -59,7 +59,7 @@
     },
     {
       "path": "examples/docs/template-nested.md",
-      "dependencyCount": 2,
+      "dependencyCount": 3,
       "dependencies": [
         {
           "type": "diagram",
@@ -79,7 +79,18 @@
           "blockId": "template.wrapper",
           "alias": null,
           "args": {
-            "fragmentRef": "./customer-templates.md#template.verification-fragment",
+            "fragmentRef": "template.verification-fragment",
+            "reviewer": "Legal"
+          }
+        },
+        {
+          "type": "diagram",
+          "reference": "template.wrapper",
+          "target": "examples/shared/customer-templates.md",
+          "blockId": "template.wrapper",
+          "alias": null,
+          "args": {
+            "fragmentRef": "./customer-templates.md#template.audit-fragment",
             "owner": "Risk Ops",
             "reviewer": "Legal"
           }
@@ -218,7 +229,7 @@
     {
       "target": "examples/shared/customer-templates.md",
       "blockId": "template.wrapper",
-      "useCount": 2,
+      "useCount": 3,
       "usedBy": [
         {
           "path": "examples/docs/template-nested.md",
@@ -236,7 +247,17 @@
           "alias": null,
           "reference": "template.wrapper",
           "args": {
-            "fragmentRef": "./customer-templates.md#template.verification-fragment",
+            "fragmentRef": "template.verification-fragment",
+            "reviewer": "Legal"
+          }
+        },
+        {
+          "path": "examples/docs/template-nested.md",
+          "type": "diagram",
+          "alias": null,
+          "reference": "template.wrapper",
+          "args": {
+            "fragmentRef": "./customer-templates.md#template.audit-fragment",
             "owner": "Risk Ops",
             "reviewer": "Legal"
           }

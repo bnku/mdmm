@@ -202,7 +202,7 @@ async function statInputPath(inputPath) {
 }
 
 function printHelp() {
-  const cliName = "mermaid-include-sync";
+  const cliName = "mdmm";
 
   process.stdout.write(
     [

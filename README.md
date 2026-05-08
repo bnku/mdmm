@@ -1,25 +1,25 @@
-# Mermaid Include Sync
+# MDMM
 
-CLI-утилита для переиспользования Mermaid-диаграмм и Mermaid-фрагментов в Markdown-документации.
+CLI-утилита `mdmm` для переиспользования Mermaid-диаграмм и Mermaid-фрагментов в Markdown-документации.
 
 В этой папке теперь лежат planning-документы и рабочий прототип обоих этапов: include целых Mermaid-диаграмм и include Mermaid-фрагментов внутри большой диаграммы.
 
 ## Что уже есть
 
 - `./src/cli.js` — CLI с командами `build` и `check` для файлов и каталогов.
-- `./bin/mermaid-include-sync.js` — publishable entrypoint для локального запуска и будущего `npx`.
+- `./bin/mdmm.js` — publishable entrypoint для локального запуска и будущего `npx`.
 - `./src/preprocess.js` — ядро препроцессора.
 - `./src/report.js` — сбор dependency report по include-использованию.
 - `./examples/shared/customer-verification.md` — библиотека канонических Mermaid-блоков.
 - `./examples/shared/customer-templates.md` — библиотека шаблонных Mermaid-блоков и фрагментов.
-- `./examples/mermaid-include.config.json` — пример project-config для docs/shared/output директорий.
+- `./examples/mdmm.config.json` — пример project-config для docs/shared/output директорий.
 - `./examples/docs/whole-include.md` — обычный whole-diagram include: short refs и explicit refs.
 - `./examples/docs/fragment-include.md` — обычный fragment include: short refs и explicit refs.
 - `./examples/docs/template-whole.md` — whole-diagram templates: one-line args, multiline args и explicit refs.
 - `./examples/docs/template-fragment.md` — fragment templates: one-line args, multiline args и explicit refs.
 - `./examples/docs/template-nested.md` — nested forwarding через `fragmentRef` с short и explicit path ссылками.
 - `./test/preprocess.test.js` — автоматические тесты на позитивные и негативные сценарии.
-- `./mermaid-include-sync/` — planning-пакет по этапам 1 и 2.
+- `./docs/mdmm/` — planning-пакет по этапам 1 и 2.
 
 ## Синтаксис v1
 
@@ -223,25 +223,25 @@ review.wrapper fragmentRef=./library.md#audit.fragment reviewer=Legal
 Локально из репозитория:
 
 ```bash
-./bin/mermaid-include-sync.js --help
-./bin/mermaid-include-sync.js build ./examples
-./bin/mermaid-include-sync.js check
-./bin/mermaid-include-sync.js report ./examples --output ./examples/dist/dependencies.json
+./bin/mdmm.js --help
+./bin/mdmm.js build ./examples
+./bin/mdmm.js check
+./bin/mdmm.js report ./examples --output ./examples/dist/dependencies.json
 ```
 
 После публикации пакет будет запускаться как обычная CLI-утилита:
 
 ```bash
-npx mermaid-include-sync --help
-npx mermaid-include-sync build
-npx mermaid-include-sync build ./docs --output ./dist/docs
+npx mdmm --help
+npx mdmm build
+npx mdmm build ./docs --output ./dist/docs
 ```
 
 ## Project Config
 
 CLI умеет работать и с отдельным `.md`, и с каталогом, и полностью "из коробки" от текущего `cwd`.
 
-Если рядом есть `mermaid-include.config.json`, CLI автоматически подхватит структуру проекта:
+Если рядом есть `mdmm.config.json`, CLI автоматически подхватит структуру проекта:
 
 ```json
 {
@@ -268,10 +268,10 @@ CLI умеет работать и с отдельным `.md`, и с катал
 Примеры:
 
 ```bash
-./bin/mermaid-include-sync.js check
-./bin/mermaid-include-sync.js build
-./bin/mermaid-include-sync.js check ./examples
-./bin/mermaid-include-sync.js build ./examples
+./bin/mdmm.js check
+./bin/mdmm.js build
+./bin/mdmm.js check ./examples
+./bin/mdmm.js build ./examples
 ```
 
 Если на вход подан каталог, CLI рекурсивно обрабатывает все `.md`-файлы и сохраняет относительные пути в выходном каталоге. Поэтому при сборке `./examples` файлы попадают в `./examples/dist/docs/...`, а не прямо в `./examples/dist/...`.
@@ -283,7 +283,7 @@ CLI умеет строить JSON-отчет по использованию in
 Пример:
 
 ```bash
-./bin/mermaid-include-sync.js report ./examples --output ./examples/dist/dependencies.json
+./bin/mdmm.js report ./examples --output ./examples/dist/dependencies.json
 ```
 
 Что попадает в отчет:
@@ -307,7 +307,7 @@ CLI умеет строить JSON-отчет по использованию in
 
 ## Planning-документы
 
-- `./mermaid-include-sync/00-roadmap.md` — общий roadmap по двум этапам.
-- `./mermaid-include-sync/01-intro-and-architecture.md` — вводный документ с архитектурными решениями и ограничениями.
-- `./mermaid-include-sync/todo/01-whole-diagram-includes.md` — задача на первый этап.
-- `./mermaid-include-sync/todo/02-fragment-includes.md` — задача на второй этап.
+- `./docs/mdmm/00-roadmap.md` — общий roadmap по двум этапам.
+- `./docs/01-intro-and-architecture.md` — вводный документ с архитектурными решениями и ограничениями.
+- `./docs/mdmm/todo/01-whole-diagram-includes.md` — задача на первый этап.
+- `./docs/mdmm/todo/02-fragment-includes.md` — задача на второй этап.

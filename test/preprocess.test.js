@@ -887,7 +887,7 @@ test("build command uses config defaults when no arguments are provided", async 
 
   await writeWorkspaceFile(
     rootDir,
-    "mermaid-include.config.json",
+    "mdmm.config.json",
     `{
   "docsDir": "docs",
   "sharedDir": "shared",
@@ -931,7 +931,7 @@ test("root directory check ignores shared and output directories from config", a
 
   await writeWorkspaceFile(
     rootDir,
-    "mermaid-include.config.json",
+    "mdmm.config.json",
     `{
   "docsDir": "docs",
   "sharedDir": "shared",
@@ -983,13 +983,13 @@ test("directory mode rejects invalid config json", async () => {
   const rootDir = await createWorkspace();
   const docsDir = path.join(rootDir, "docs");
 
-  await writeWorkspaceFile(rootDir, "mermaid-include.config.json", `{ invalid json`);
+  await writeWorkspaceFile(rootDir, "mdmm.config.json", `{ invalid json`);
   await writeWorkspaceFile(rootDir, "docs/one.md", `# Empty\n`);
 
   await assert.rejects(
     () => execFileAsync(process.execPath, [cliPath, "check", docsDir], { cwd: projectRoot }),
     (error) => {
-      assert.match(error.stderr, /Invalid JSON in .*mermaid-include\.config\.json/);
+      assert.match(error.stderr, /Invalid JSON in .*mdmm\.config\.json/);
       return true;
     },
   );
@@ -1001,7 +1001,7 @@ test("directory mode rejects deprecated include exclude config fields", async ()
 
   await writeWorkspaceFile(
     rootDir,
-    "mermaid-include.config.json",
+    "mdmm.config.json",
     `{
   "include": ["docs/**/*.md"]
 }
@@ -1136,7 +1136,7 @@ test("report command ignores shared and output directories when run from project
 
   await writeWorkspaceFile(
     rootDir,
-    "mermaid-include.config.json",
+    "mdmm.config.json",
     `{
   "docsDir": "docs",
   "sharedDir": "shared",
@@ -1213,7 +1213,7 @@ test("cli help prints usage", async () => {
   });
 
   assert.match(stdout, /Usage:/);
-  assert.match(stdout, /mermaid-include-sync build/);
+  assert.match(stdout, /mdmm build/);
 });
 
 test("cli rejects unknown command", async () => {
@@ -1332,7 +1332,7 @@ test("loadProjectSettings falls back to cwd defaults for missing path", async ()
 
 test("loadProjectSettings rejects non-object config", async () => {
   const rootDir = await createWorkspace();
-  await writeWorkspaceFile(rootDir, "mermaid-include.config.json", `[]`);
+  await writeWorkspaceFile(rootDir, "mdmm.config.json", `[]`);
 
   await assert.rejects(() => loadProjectSettings(rootDir, { cwd: rootDir }), (error) => {
     assert.ok(error instanceof MermaidIncludeError);
@@ -1344,7 +1344,7 @@ test("loadProjectSettings rejects non-object config", async () => {
 
 test("loadProjectSettings rejects non-string directory fields", async () => {
   const rootDir = await createWorkspace();
-  await writeWorkspaceFile(rootDir, "mermaid-include.config.json", `{"sharedDir": 42}`);
+  await writeWorkspaceFile(rootDir, "mdmm.config.json", `{"sharedDir": 42}`);
 
   await assert.rejects(() => loadProjectSettings(rootDir, { cwd: rootDir }), (error) => {
     assert.ok(error instanceof MermaidIncludeError);
