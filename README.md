@@ -46,7 +46,8 @@ A --> B
 
 ````md
 <!-- mermaid:block customer-verification.fragment type=fragment exports=entry,success,fail -->
-```mermaid-fragment
+```mermaid
+flowchart TD
 entry[Начать верификацию]
 entry --> check{Документы валидны?}
 check -- Да --> success[Верификация пройдена]
@@ -68,6 +69,8 @@ kyc__success --> Done
 
 Что делает v2:
 
+- author-исходник остается валидным для Mermaid preview, потому что фрагмент оформляется как обычный ` ```mermaid ` блок;
+- при include первая строка с типом диаграммы (`flowchart TD`, `sequenceDiagram` и т.д.) удаляется перед встраиванием во внешнюю диаграмму;
 - требует `alias` через `as <alias>`;
 - переписывает идентификаторы узлов в `<alias>__<node-id>`;
 - разрешает снаружи ссылаться только на узлы из `exports`.

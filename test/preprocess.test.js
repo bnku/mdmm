@@ -243,7 +243,8 @@ test("builds mermaid diagram with fragment include and alias rewrite", async () 
     rootDir,
     "shared/fragments.md",
     `<!-- mermaid:block customer.fragment type=fragment exports=entry,success,fail -->
-\`\`\`mermaid-fragment
+\`\`\`mermaid
+flowchart RL
 entry[Start]
 entry --> check{Valid?}
 check -- Yes --> success[Approved]
@@ -270,6 +271,7 @@ kyc__fail --> Rework[Retry]
   assert.match(output, /kyc__entry\[Start\]/);
   assert.match(output, /kyc__entry --> kyc__check\{Valid\?\}/);
   assert.match(output, /kyc__success --> Done\[Finish\]/);
+  assert.doesNotMatch(output, /flowchart RL/);
   assert.doesNotMatch(output, /%% include:/);
 });
 
@@ -280,7 +282,8 @@ test("supports reusing one fragment with different aliases", async () => {
     rootDir,
     "shared/fragments.md",
     `<!-- mermaid:block customer.fragment type=fragment exports=entry,success -->
-\`\`\`mermaid-fragment
+\`\`\`mermaid
+flowchart LR
 entry[Start]
 entry --> success[Done]
 \`\`\`
@@ -335,7 +338,8 @@ test("fails when external diagram references non-exported fragment node", async 
     rootDir,
     "shared/fragments.md",
     `<!-- mermaid:block customer.fragment type=fragment exports=entry,success -->
-\`\`\`mermaid-fragment
+\`\`\`mermaid
+flowchart TD
 entry[Start]
 entry --> hidden[Internal]
 hidden --> success[Done]
@@ -370,7 +374,8 @@ test("fails when whole-diagram include targets a fragment block", async () => {
     rootDir,
     "shared/fragments.md",
     `<!-- mermaid:block customer.fragment type=fragment exports=entry -->
-\`\`\`mermaid-fragment
+\`\`\`mermaid
+flowchart TD
 entry[Start]
 \`\`\`
 <!-- /mermaid:block -->
@@ -407,7 +412,8 @@ A --> B
 <!-- /mermaid:block -->
 
 <!-- mermaid:block customer.fragment type=fragment exports=entry,done -->
-\`\`\`mermaid-fragment
+\`\`\`mermaid
+flowchart TD
 entry[Start]
 entry --> done[Done]
 \`\`\`

@@ -77,8 +77,8 @@ async function resolveFragmentBlockReference(reference, context, stack) {
 
   if (!block.resolvedFragment) {
     const nextStack = pushBlockToStack(reference, stack, context.maxIncludeDepth);
-    const fragmentFence = extractFence(block.rawContent.trim(), "mermaid-fragment", reference.filePath, reference.blockId);
-    const resolvedBody = await resolveFragmentIncludesInCode(fragmentFence.body, reference.filePath, context, nextStack);
+    const fragmentBody = extractFragmentBody(block.rawContent.trim(), reference.filePath, reference.blockId);
+    const resolvedBody = await resolveFragmentIncludesInCode(fragmentBody, reference.filePath, context, nextStack);
     const trimmedBody = resolvedBody.trim();
 
     assertNoUnresolvedDirectives(trimmedBody, reference.filePath, reference.blockId);
@@ -469,6 +469,23 @@ function extractFence(markdown, language, filePath, blockId) {
     infoSuffix: lines[0].slice(prefix.length),
     body: lines.slice(1, -1).join("\n"),
   };
+}
+
+function extractFragmentBody(markdown, filePath, blockId) {
+  const fence = extractFence(markdown, "mermaid", filePath, blockId);
+  const lines = fence.body.split(/\r?\n/);
+
+  if (lines.length < 2 || !lines[0].trim()) {
+    throw new MermaidIncludeError(
+      `Fragment block ${blockId} in ${path.relative(process.cwd(), filePath)} must start with a Mermaid diagram type line followed by fragment content`,
+      {
+        code: "INVALID_BLOCK_CONTENT",
+        language: "mermaid",
+      },
+    );
+  }
+
+  return lines.slice(1).join("\n");
 }
 
 function buildFence(language, infoSuffix, body) {

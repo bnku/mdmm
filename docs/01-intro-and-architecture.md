@@ -99,7 +99,7 @@ B -- Нет --> D[Запросить корректировки]
 
 ### Что именно внедряется
 
-- Отдельный тип блока `mermaid-fragment`.
+- Отдельный тип блока `type=fragment`, который оформляется как обычный ` ```mermaid ` для корректного preview.
 - Директива include внутри ` ```mermaid ` через Mermaid-комментарий.
 - Alias/prefix rewriting для безопасного переименования node id.
 - Явные экспортируемые узлы (`exports`) для связывания внешнего графа с фрагментом.
@@ -110,7 +110,8 @@ B -- Нет --> D[Запросить корректировки]
 
 ````md
 <!-- mermaid:block customer-verification.fragment type=fragment exports=entry,success,fail -->
-```mermaid-fragment
+```mermaid
+flowchart TD
 entry[Начать верификацию]
 entry --> check{Документы валидны?}
 check -- Да --> success[Верификация пройдена]
