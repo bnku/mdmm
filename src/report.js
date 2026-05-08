@@ -1,7 +1,9 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { MermaidIncludeError } from "./preprocess.js";
+import { MermaidIncludeError } from "./errors.js";
+import { loadProjectSettings } from "./project.js";
+import { resolveBlockReference, resolveReferenceText } from "./references.js";
 
 const WHOLE_INCLUDE_PATTERN = /```mermaid-include[^\n]*\r?\n([\s\S]*?)\r?\n```/g;
 const FRAGMENT_INCLUDE_PATTERN = /^\s*%%\s*include:\s+(\S+)(?:\s+as\s+([A-Za-z][A-Za-z0-9_-]*))?\s*$/gm;
@@ -9,12 +11,17 @@ const FRAGMENT_INCLUDE_PATTERN = /^\s*%%\s*include:\s+(\S+)(?:\s+as\s+([A-Za-z][
 export async function buildDependencyReport(filePaths, options = {}) {
   const cwd = options.cwd ?? process.cwd();
   const rootPath = options.rootPath ?? cwd;
+  const projectSettings = options.projectSettings ?? (await loadProjectSettings(rootPath, { cwd }));
   const files = [];
   const blockUsage = new Map();
+  const context = {
+    projectSettings,
+    sharedBlockIndexPromise: null,
+  };
 
   for (const filePath of [...filePaths].sort()) {
     const markdown = await readUtf8(filePath);
-    const dependencies = collectFileDependencies(markdown, filePath);
+    const dependencies = await collectFileDependencies(markdown, filePath, context);
 
     files.push({
       path: path.relative(cwd, filePath),
@@ -67,14 +74,14 @@ export async function buildDependencyReport(filePaths, options = {}) {
   };
 }
 
-export function collectFileDependencies(markdown, currentFilePath) {
+export async function collectFileDependencies(markdown, currentFilePath, context) {
   const dependencies = [];
 
   for (const match of markdown.matchAll(WHOLE_INCLUDE_PATTERN)) {
-    const reference = parseBlockReference(match[1], currentFilePath, "mermaid-include");
+    const reference = await resolveBlockReference(match[1], currentFilePath, "mermaid-include", context);
     dependencies.push({
       type: "diagram",
-      reference: `${path.relative(path.dirname(currentFilePath), reference.filePath)}#${reference.blockId}`,
+      reference: reference.referenceText,
       resolvedFilePath: reference.filePath,
       blockId: reference.blockId,
       alias: null,
@@ -91,10 +98,10 @@ export function collectFileDependencies(markdown, currentFilePath) {
       );
     }
 
-    const reference = parseSingleReference(match[1], currentFilePath, "fragment include");
+    const reference = await resolveReferenceText(match[1], currentFilePath, "fragment include", context);
     dependencies.push({
       type: "fragment",
-      reference: `${path.relative(path.dirname(currentFilePath), reference.filePath)}#${reference.blockId}`,
+      reference: reference.referenceText,
       resolvedFilePath: reference.filePath,
       blockId: reference.blockId,
       alias: match[2],
@@ -113,54 +120,6 @@ function formatDependency(dependency, cwd) {
     alias: dependency.alias,
   };
 }
-
-function parseBlockReference(rawReference, currentFilePath, sourceName) {
-  const lines = rawReference
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  if (lines.length !== 1) {
-    throw new MermaidIncludeError(
-      `Each ${sourceName} block must contain exactly one non-empty reference in ${path.relative(process.cwd(), currentFilePath)}`,
-      {
-        code: "INVALID_INCLUDE_DIRECTIVE",
-      },
-    );
-  }
-
-  return parseSingleReference(lines[0], currentFilePath, sourceName);
-}
-
-function parseSingleReference(referenceText, currentFilePath, sourceName) {
-  const separatorIndex = referenceText.lastIndexOf("#");
-  if (separatorIndex === -1) {
-    throw new MermaidIncludeError(
-      `Invalid ${sourceName} reference ${JSON.stringify(referenceText)} in ${path.relative(process.cwd(), currentFilePath)}. Expected ./path/to/file.md#block-id`,
-      {
-        code: "INVALID_INCLUDE_REFERENCE",
-      },
-    );
-  }
-
-  const filePart = referenceText.slice(0, separatorIndex).trim();
-  const blockId = referenceText.slice(separatorIndex + 1).trim();
-
-  if (!filePart || !blockId) {
-    throw new MermaidIncludeError(
-      `Invalid ${sourceName} reference ${JSON.stringify(referenceText)} in ${path.relative(process.cwd(), currentFilePath)}. Expected ./path/to/file.md#block-id`,
-      {
-        code: "INVALID_INCLUDE_REFERENCE",
-      },
-    );
-  }
-
-  return {
-    filePath: path.resolve(path.dirname(currentFilePath), filePart),
-    blockId,
-  };
-}
-
 async function readUtf8(filePath) {
   try {
     return await readFile(filePath, "utf8");

@@ -11,7 +11,7 @@ CLI-утилита для переиспользования Mermaid-диагр�
 - `./src/preprocess.js` — ядро препроцессора.
 - `./src/report.js` — сбор dependency report по include-использованию.
 - `./examples/shared/customer-verification.md` — библиотека канонических Mermaid-блоков.
-- `./examples/mermaid-include.config.json` — пример include/exclude-конфига для bulk-сборки.
+- `./examples/mermaid-include.config.json` — пример project-config для docs/shared/output директорий.
 - `./examples/docs/onboarding.md` — пример include целой диаграммы.
 - `./examples/docs/journey.md` — пример include Mermaid-фрагмента внутри диаграммы.
 - `./test/preprocess.test.js` — автоматические тесты на позитивные и негативные сценарии.
@@ -30,7 +30,15 @@ A --> B
 <!-- /mermaid:block -->
 ````
 
-Вставка в произвольный документ:
+Короткая вставка в произвольный документ:
+
+````md
+```mermaid-include
+customer-verification.overview
+```
+````
+
+Явная вставка с принудительным path-based поиском тоже поддерживается:
 
 ````md
 ```mermaid-include
@@ -57,6 +65,17 @@ check -- Нет --> fail[Нужны корректировки]
 ````
 
 Вставка внутрь большой диаграммы:
+
+````md
+```mermaid
+flowchart LR
+Start --> kyc__entry
+%% include: customer-verification.fragment as kyc
+kyc__success --> Done
+```
+````
+
+Если нужен принудительный path-based поиск, fragment include тоже поддерживает явную форму:
 
 ````md
 ```mermaid
@@ -97,7 +116,8 @@ kyc__success --> Done
 
 ```bash
 ./bin/mermaid-include-sync.js --help
-./bin/mermaid-include-sync.js build ./examples --output ./examples/dist
+./bin/mermaid-include-sync.js build ./examples
+./bin/mermaid-include-sync.js check
 ./bin/mermaid-include-sync.js report ./examples --output ./examples/dist/dependencies.json
 ```
 
@@ -105,36 +125,45 @@ kyc__success --> Done
 
 ```bash
 npx mermaid-include-sync --help
+npx mermaid-include-sync build
 npx mermaid-include-sync build ./docs --output ./dist/docs
 ```
 
-## Directory Mode
+## Project Config
 
-CLI умеет работать не только с отдельным `.md`, но и с каталогом.
+CLI умеет работать и с отдельным `.md`, и с каталогом, и полностью "из коробки" от текущего `cwd`.
 
-Для bulk-сценария можно положить рядом `mermaid-include.config.json`:
+Если рядом есть `mermaid-include.config.json`, CLI автоматически подхватит структуру проекта:
 
 ```json
 {
-  "include": ["docs/**/*.md"],
-  "exclude": ["dist/**/*.md", "shared/**/*.md"]
+  "docsDir": "docs",
+  "sharedDir": "shared",
+  "outputDir": "dist"
 }
 ```
 
-- `include` и `exclude` применяются только в directory mode;
-- конфиг автоматически ищется от входного каталога вверх;
-- паттерны считаются относительно каталога, где лежит конфиг.
+Все поля опциональны. Если конфига нет или какое-то поле пропущено, используются дефолты от текущего `cwd`.
 
-Проверка каталога:
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `docsDir` | `docs` | где лежат исходные Markdown-документы |
+| `sharedDir` | `shared` | где искать short refs по `blockId` |
+| `outputDir` | `dist` | куда писать собранные документы при directory build |
+
+- конфиг автоматически ищется от входного пути вверх;
+- short refs ищутся только в `sharedDir`;
+- при `build`, `check` и `report` без positional args CLI берет `docsDir` из конфига или из дефолта `cwd/docs`;
+- при `build <dir>` без `--output` CLI пишет в `outputDir`;
+- `sharedDir` и `outputDir` автоматически пропускаются при рекурсивной обработке root-каталога.
+
+Примеры:
 
 ```bash
-node ./src/cli.js check ./examples
-```
-
-Сборка каталога с сохранением структуры путей:
-
-```bash
-node ./src/cli.js build ./examples --output ./examples/dist
+./bin/mermaid-include-sync.js check
+./bin/mermaid-include-sync.js build
+./bin/mermaid-include-sync.js check ./examples
+./bin/mermaid-include-sync.js build ./examples
 ```
 
 Если на вход подан каталог, CLI рекурсивно обрабатывает все `.md`-файлы и сохраняет относительные пути в выходном каталоге. Поэтому при сборке `./examples` файлы попадают в `./examples/dist/docs/...`, а не прямо в `./examples/dist/...`.
@@ -146,20 +175,20 @@ CLI умеет строить JSON-отчет по использованию in
 Пример:
 
 ```bash
-node ./src/cli.js report ./examples --output ./examples/dist/dependencies.json
+./bin/mermaid-include-sync.js report ./examples --output ./examples/dist/dependencies.json
 ```
 
 Что попадает в отчет:
 
 - список Markdown-файлов и их зависимостей;
 - тип зависимости: `diagram` или `fragment`;
-- `block id`, целевой файл и `alias` для fragment include;
+- исходная ссылка автора, `block id`, целевой файл и `alias` для fragment include;
 - сводка `block -> usedBy`, чтобы быстро видеть usage-map общей библиотеки.
 
 ## Ограничения текущей версии
 
 - Канонический блок в итоге должен разворачиваться ровно в один ` ```mermaid ` fenced block.
-- Include по-прежнему задается одной ссылкой вида `path/to/file.md#block-id`.
+- Include может задаваться либо short ref вида `block-id`, либо явной ссылкой `path/to/file.md#block-id`.
 - Глубина вложенных include ограничена параметром `--max-include-depth` и по умолчанию равна `5`.
 - Для fragment include поддерживаются только явно экспортированные узлы.
 - Alias должен быть уникальным внутри одного ` ```mermaid ` блока.

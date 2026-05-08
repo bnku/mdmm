@@ -77,7 +77,7 @@ B -- Нет --> D[Запросить корректировки]
 
 ````md
 ```mermaid-include
-../shared/customer-verification.md#customer-verification.overview
+customer-verification.overview
 ```
 ````
 
@@ -126,7 +126,7 @@ check -- Нет --> fail[Нужны корректировки]
 ```mermaid
 flowchart LR
 A[Получить заявку] --> kyc__entry
-%% include: ../shared/customer-verification.md#customer-verification.fragment as kyc
+%% include: customer-verification.fragment as kyc
 kyc__success --> B[Продолжить оформление]
 kyc__fail --> C[Вернуть на доработку]
 ```

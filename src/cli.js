@@ -1,14 +1,13 @@
 #!/usr/bin/env node
-import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 
-import { MermaidIncludeError, preprocessFile } from "./preprocess.js";
+import { MermaidIncludeError } from "./errors.js";
+import { preprocessFile } from "./preprocess.js";
+import { CONFIG_FILE_NAME, isSameOrNestedPath, loadProjectSettings } from "./project.js";
 import { buildDependencyReport } from "./report.js";
-
-const CONFIG_FILE_NAME = "mermaid-include.config.json";
-const DEFAULT_INCLUDE_PATTERNS = ["**/*.md"];
 
 export async function main(argv = process.argv.slice(2)) {
   const command = argv[0];
@@ -25,27 +24,24 @@ export async function main(argv = process.argv.slice(2)) {
   }
 
   const parsed = parseArgs(argv.slice(1));
-  if (!parsed.inputPath) {
-    throw new MermaidIncludeError("Input Markdown file is required", {
-      code: "MISSING_INPUT",
-    });
-  }
-
-  const inputPath = path.resolve(parsed.inputPath);
+  const projectSettings = await loadProjectSettings(parsed.inputPath ?? process.cwd(), { cwd: process.cwd() });
+  const inputPath = path.resolve(parsed.inputPath ?? projectSettings.docsDir);
   const inputStats = await statInputPath(inputPath);
 
   if (command === "report") {
-    await handleReportCommand(inputPath, inputStats, parsed);
+    await handleReportCommand(inputPath, inputStats, parsed, projectSettings);
     return;
   }
 
   if (inputStats.isDirectory()) {
-    await handleDirectoryCommand(command, inputPath, parsed);
+    await handleDirectoryCommand(command, inputPath, parsed, projectSettings);
     return;
   }
 
   const output = await preprocessFile(inputPath, command === "build" ? parsed.outputPath : undefined, {
     maxIncludeDepth: parsed.maxIncludeDepth,
+    projectSettings,
+    cwd: process.cwd(),
   });
 
   if (command === "check") {
@@ -64,14 +60,15 @@ export async function main(argv = process.argv.slice(2)) {
   process.stdout.write(`Built ${path.relative(process.cwd(), path.resolve(parsed.outputPath))}\n`);
 }
 
-async function handleReportCommand(inputPath, inputStats, parsed) {
+async function handleReportCommand(inputPath, inputStats, parsed, projectSettings) {
   const filePaths = inputStats.isDirectory()
-    ? filterMarkdownFiles(await listMarkdownFiles(inputPath), inputPath, await loadDirectoryConfig(inputPath))
+    ? await listMarkdownFiles(inputPath, { ignoredDirs: getIgnoredDirs(inputPath, projectSettings) })
     : [inputPath];
 
   const report = await buildDependencyReport(filePaths, {
     cwd: process.cwd(),
     rootPath: inputPath,
+    projectSettings,
   });
 
   const output = `${JSON.stringify(report, null, 2)}\n`;
@@ -87,27 +84,29 @@ async function handleReportCommand(inputPath, inputStats, parsed) {
   process.stdout.write(output);
 }
 
-async function handleDirectoryCommand(command, inputPath, parsed) {
-  const config = await loadDirectoryConfig(inputPath);
-  const markdownFiles = filterMarkdownFiles(await listMarkdownFiles(inputPath), inputPath, config);
-
-  if (command === "build" && !parsed.outputPath) {
-    throw new MermaidIncludeError("Directory build requires --output <output-dir>", {
-      code: "MISSING_OUTPUT",
-    });
-  }
+async function handleDirectoryCommand(command, inputPath, parsed, projectSettings) {
+  const markdownFiles = await listMarkdownFiles(inputPath, { ignoredDirs: getIgnoredDirs(inputPath, projectSettings) });
+  const outputBaseDir = path.resolve(parsed.outputPath ?? projectSettings.outputDir);
 
   for (const filePath of markdownFiles) {
     const relativePath = path.relative(inputPath, filePath);
 
     if (command === "check") {
-      await preprocessFile(filePath, undefined, { maxIncludeDepth: parsed.maxIncludeDepth });
+      await preprocessFile(filePath, undefined, {
+        maxIncludeDepth: parsed.maxIncludeDepth,
+        projectSettings,
+        cwd: process.cwd(),
+      });
       process.stdout.write(`OK ${path.relative(process.cwd(), filePath)}\n`);
       continue;
     }
 
-    const outputPath = path.join(path.resolve(parsed.outputPath), relativePath);
-    await preprocessFile(filePath, outputPath, { maxIncludeDepth: parsed.maxIncludeDepth });
+    const outputPath = path.join(outputBaseDir, relativePath);
+    await preprocessFile(filePath, outputPath, {
+      maxIncludeDepth: parsed.maxIncludeDepth,
+      projectSettings,
+      cwd: process.cwd(),
+    });
     process.stdout.write(`Built ${path.relative(process.cwd(), outputPath)}\n`);
   }
 
@@ -157,7 +156,8 @@ function parseArgs(argv) {
   return parsed;
 }
 
-async function listMarkdownFiles(rootDir) {
+async function listMarkdownFiles(rootDir, options = {}) {
+  const ignoredDirs = options.ignoredDirs ?? [];
   const entries = await readdir(rootDir, { withFileTypes: true });
   const files = [];
 
@@ -165,7 +165,11 @@ async function listMarkdownFiles(rootDir) {
     const entryPath = path.join(rootDir, entry.name);
 
     if (entry.isDirectory()) {
-      files.push(...(await listMarkdownFiles(entryPath)));
+      if (ignoredDirs.some((ignoredDir) => isSameOrNestedPath(ignoredDir, entryPath))) {
+        continue;
+      }
+
+      files.push(...(await listMarkdownFiles(entryPath, options)));
       continue;
     }
 
@@ -177,101 +181,10 @@ async function listMarkdownFiles(rootDir) {
   return files;
 }
 
-function filterMarkdownFiles(files, inputPath, config) {
-  const includePatterns = config?.include ?? DEFAULT_INCLUDE_PATTERNS;
-  const excludePatterns = config?.exclude ?? [];
-  const configBaseDir = config?.baseDir ?? inputPath;
-
-  return files.filter((filePath) => {
-    const relativePath = normalizeGlobPath(path.relative(configBaseDir, filePath));
-    const isIncluded = includePatterns.some((pattern) => path.matchesGlob(relativePath, pattern));
-    const isExcluded = excludePatterns.some((pattern) => path.matchesGlob(relativePath, pattern));
-    return isIncluded && !isExcluded;
-  });
-}
-
-async function loadDirectoryConfig(inputPath) {
-  const configPath = await findConfigPath(inputPath);
-  if (!configPath) {
-    return null;
-  }
-
-  let parsedConfig;
-
-  try {
-    parsedConfig = JSON.parse(await readFile(configPath, "utf8"));
-  } catch (error) {
-    throw new MermaidIncludeError(`Invalid JSON in ${path.relative(process.cwd(), configPath)}`, {
-      code: "INVALID_CONFIG",
-      configPath,
-    });
-  }
-
-  if (!parsedConfig || typeof parsedConfig !== "object" || Array.isArray(parsedConfig)) {
-    throw new MermaidIncludeError(`Config ${path.relative(process.cwd(), configPath)} must be a JSON object`, {
-      code: "INVALID_CONFIG",
-      configPath,
-    });
-  }
-
-  const include = normalizePatternList(parsedConfig.include, "include", configPath);
-  const exclude = normalizePatternList(parsedConfig.exclude, "exclude", configPath);
-
-  return {
-    baseDir: path.dirname(configPath),
-    configPath,
-    include,
-    exclude,
-  };
-}
-
-async function findConfigPath(startDir) {
-  let currentDir = startDir;
-
-  while (true) {
-    const candidatePath = path.join(currentDir, CONFIG_FILE_NAME);
-
-    try {
-      const candidateStats = await stat(candidatePath);
-      if (candidateStats.isFile()) {
-        return candidatePath;
-      }
-    } catch (error) {
-      if (!error || error.code !== "ENOENT") {
-        throw error;
-      }
-    }
-
-    const parentDir = path.dirname(currentDir);
-    if (parentDir === currentDir) {
-      return null;
-    }
-
-    currentDir = parentDir;
-  }
-}
-
-function normalizePatternList(value, key, configPath) {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  if (!Array.isArray(value) || value.some((item) => typeof item !== "string" || item.length === 0)) {
-    throw new MermaidIncludeError(
-      `Config field ${key} in ${path.relative(process.cwd(), configPath)} must be an array of non-empty strings`,
-      {
-        code: "INVALID_CONFIG",
-        configPath,
-        key,
-      },
-    );
-  }
-
-  return value.map(normalizeGlobPath);
-}
-
-function normalizeGlobPath(value) {
-  return value.split(path.sep).join("/");
+function getIgnoredDirs(inputPath, projectSettings) {
+  return [projectSettings.sharedDir, projectSettings.outputDir].filter(
+    (dirPath) => dirPath !== inputPath && isSameOrNestedPath(inputPath, dirPath),
+  );
 }
 
 async function statInputPath(inputPath) {
@@ -294,15 +207,14 @@ function printHelp() {
   process.stdout.write(
     [
       "Usage:",
-      `  ${cliName} build <input.md> [--output <output.md>] [--max-include-depth <n>]`,
-      `  ${cliName} build <input-dir> --output <output-dir> [--max-include-depth <n>]`,
-      `  ${cliName} check <input.md> [--max-include-depth <n>]`,
-      `  ${cliName} check <input-dir> [--max-include-depth <n>]`,
-      `  ${cliName} report <input.md|input-dir> [--output <report.json>]`,
+      `  ${cliName} build [<input.md|input-dir>] [--output <output-path>] [--max-include-depth <n>]`,
+      `  ${cliName} check [<input.md|input-dir>] [--max-include-depth <n>]`,
+      `  ${cliName} report [<input.md|input-dir>] [--output <report.json>]`,
       "",
       `Config file: ${CONFIG_FILE_NAME}`,
-      "  include/exclude patterns are applied in directory mode",
-      "  config is auto-discovered from the input directory upward",
+      "  optional fields: docsDir, sharedDir, outputDir",
+      "  omitted config falls back to cwd/docs, cwd/shared, cwd/dist",
+      "  config is auto-discovered from the input path upward",
       "",
       "Commands:",
       "  build  Resolve include directives and write Markdown output",

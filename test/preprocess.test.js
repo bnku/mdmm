@@ -69,6 +69,34 @@ X --> Y
   assert.doesNotMatch(output, /```mermaid-include/);
 });
 
+test("builds markdown with short block reference using cwd defaults", async () => {
+  const rootDir = await createWorkspace();
+
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/library.md",
+    `<!-- mermaid:block customer.overview -->
+\`\`\`mermaid
+flowchart TD
+A --> B
+\`\`\`
+<!-- /mermaid:block -->
+`,
+  );
+
+  const inputPath = await writeWorkspaceFile(
+    rootDir,
+    "docs/process.md",
+    `\`\`\`mermaid-include
+customer.overview
+\`\`\`
+`,
+  );
+
+  const output = await preprocessFile(inputPath, undefined, { cwd: rootDir });
+  assert.match(output, /flowchart TD\nA --> B/);
+});
+
 test("fails when referenced file does not exist", async () => {
   const rootDir = await createWorkspace();
   const inputPath = await writeWorkspaceFile(
@@ -114,6 +142,49 @@ A --> B
   await assert.rejects(() => preprocessFile(inputPath), (error) => {
     assert.ok(error instanceof MermaidIncludeError);
     assert.equal(error.details.code, "MISSING_BLOCK");
+    return true;
+  });
+});
+
+test("fails when short block reference is ambiguous", async () => {
+  const rootDir = await createWorkspace();
+
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/one.md",
+    `<!-- mermaid:block customer.overview -->
+\`\`\`mermaid
+flowchart TD
+A --> B
+\`\`\`
+<!-- /mermaid:block -->
+`,
+  );
+
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/two.md",
+    `<!-- mermaid:block customer.overview -->
+\`\`\`mermaid
+flowchart TD
+B --> C
+\`\`\`
+<!-- /mermaid:block -->
+`,
+  );
+
+  const inputPath = await writeWorkspaceFile(
+    rootDir,
+    "docs/process.md",
+    `\`\`\`mermaid-include
+customer.overview
+\`\`\`
+`,
+  );
+
+  await assert.rejects(() => preprocessFile(inputPath, undefined, { cwd: rootDir }), (error) => {
+    assert.ok(error instanceof MermaidIncludeError);
+    assert.equal(error.details.code, "AMBIGUOUS_BLOCK_REFERENCE");
     return true;
   });
 });
@@ -273,6 +344,39 @@ kyc__fail --> Rework[Retry]
   assert.match(output, /kyc__success --> Done\[Finish\]/);
   assert.doesNotMatch(output, /flowchart RL/);
   assert.doesNotMatch(output, /%% include:/);
+});
+
+test("builds mermaid diagram with short fragment reference using cwd defaults", async () => {
+  const rootDir = await createWorkspace();
+
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/fragments.md",
+    `<!-- mermaid:block customer.fragment type=fragment exports=entry,success -->
+\`\`\`mermaid
+flowchart TD
+entry[Start]
+entry --> success[Done]
+\`\`\`
+<!-- /mermaid:block -->
+`,
+  );
+
+  const inputPath = await writeWorkspaceFile(
+    rootDir,
+    "docs/journey.md",
+    `\`\`\`mermaid
+flowchart LR
+Begin --> flow__entry
+%% include: customer.fragment as flow
+flow__success --> Finish
+\`\`\`
+`,
+  );
+
+  const output = await preprocessFile(inputPath, undefined, { cwd: rootDir });
+  assert.match(output, /flow__entry\[Start\]/);
+  assert.match(output, /flow__success --> Finish/);
 });
 
 test("supports reusing one fragment with different aliases", async () => {
@@ -503,29 +607,16 @@ A --> B
   assert.match(stdout, /Checked 2 Markdown file\(s\) under/);
 });
 
-test("directory build requires output directory", async () => {
-  const rootDir = await createWorkspace();
-  const docsDir = path.join(rootDir, "docs");
-  await mkdir(docsDir, { recursive: true });
-
-  await assert.rejects(
-    () => execFileAsync(process.execPath, [cliPath, "build", docsDir], { cwd: projectRoot }),
-    (error) => {
-      assert.match(error.stderr, /Directory build requires --output <output-dir>/);
-      return true;
-    },
-  );
-});
-
-test("directory mode auto-discovers config and applies include/exclude patterns", async () => {
+test("build command uses config defaults when no arguments are provided", async () => {
   const rootDir = await createWorkspace();
 
   await writeWorkspaceFile(
     rootDir,
     "mermaid-include.config.json",
     `{
-  "include": ["docs/**/*.md"],
-  "exclude": ["docs/generated/**/*.md"]
+  "docsDir": "docs",
+  "sharedDir": "shared",
+  "outputDir": "public"
 }
 `,
   );
@@ -542,28 +633,70 @@ A --> B
 `,
   );
 
-  const docsDir = path.join(rootDir, "docs");
+  await writeWorkspaceFile(
+    rootDir,
+    "docs/one.md",
+    `\`\`\`mermaid-include
+customer.overview
+\`\`\`
+`,
+  );
+
+  const { stdout } = await execFileAsync(process.execPath, [cliPath, "build"], {
+    cwd: rootDir,
+  });
+
+  assert.match(stdout, /Built public\/one\.md/);
+  const built = await readFile(path.join(rootDir, "public", "one.md"), "utf8");
+  assert.match(built, /flowchart TD/);
+});
+
+test("root directory check ignores shared and output directories from config", async () => {
+  const rootDir = await createWorkspace();
+
+  await writeWorkspaceFile(
+    rootDir,
+    "mermaid-include.config.json",
+    `{
+  "docsDir": "docs",
+  "sharedDir": "shared",
+  "outputDir": "dist"
+}
+`,
+  );
+
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/library.md",
+    `<!-- mermaid:block customer.overview -->
+\`\`\`mermaid
+flowchart TD
+A --> B
+\`\`\`
+<!-- /mermaid:block -->
+`,
+  );
 
   await writeWorkspaceFile(
     rootDir,
     "docs/one.md",
     `\`\`\`mermaid-include
-../shared/library.md#customer.overview
+customer.overview
 \`\`\`
 `,
   );
 
   await writeWorkspaceFile(
     rootDir,
-    "docs/generated/skip-me.md",
+    "dist/skip-me.md",
     `\`\`\`mermaid-include
-../missing.md#broken
+broken.block
 \`\`\`
 `,
   );
 
-  const { stdout } = await execFileAsync(process.execPath, [cliPath, "check", docsDir], {
-    cwd: projectRoot,
+  const { stdout } = await execFileAsync(process.execPath, [cliPath, "check", rootDir], {
+    cwd: rootDir,
   });
 
   assert.match(stdout, /OK .*docs\/one\.md/);
@@ -587,28 +720,72 @@ test("directory mode rejects invalid config json", async () => {
   );
 });
 
+test("directory mode rejects deprecated include exclude config fields", async () => {
+  const rootDir = await createWorkspace();
+  const docsDir = path.join(rootDir, "docs");
+
+  await writeWorkspaceFile(
+    rootDir,
+    "mermaid-include.config.json",
+    `{
+  "include": ["docs/**/*.md"]
+}
+`,
+  );
+  await writeWorkspaceFile(rootDir, "docs/one.md", `# Empty\n`);
+
+  await assert.rejects(
+    () => execFileAsync(process.execPath, [cliPath, "check", docsDir], { cwd: rootDir }),
+    (error) => {
+      assert.match(error.stderr, /deprecated include\/exclude fields/);
+      return true;
+    },
+  );
+});
+
 test("report command returns dependency map for a single file", async () => {
   const rootDir = await createWorkspace();
+
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/library.md",
+    `<!-- mermaid:block customer.overview -->
+\`\`\`mermaid
+flowchart TD
+A --> B
+\`\`\`
+<!-- /mermaid:block -->
+
+<!-- mermaid:block customer.fragment type=fragment exports=entry,success -->
+\`\`\`mermaid
+flowchart TD
+entry[Start]
+entry --> success[Done]
+\`\`\`
+<!-- /mermaid:block -->
+`,
+  );
+
   const inputPath = await writeWorkspaceFile(
     rootDir,
     "docs/journey.md",
     `# Journey
 
 \`\`\`mermaid-include
-../shared/library.md#customer.overview
+customer.overview
 \`\`\`
 
 \`\`\`mermaid
 flowchart LR
 Start --> kyc__entry
-%% include: ../shared/library.md#customer.fragment as kyc
+%% include: customer.fragment as kyc
 kyc__success --> Done
 \`\`\`
 `,
   );
 
   const { stdout } = await execFileAsync(process.execPath, [cliPath, "report", inputPath], {
-    cwd: projectRoot,
+    cwd: rootDir,
   });
 
   const report = JSON.parse(stdout);
@@ -620,15 +797,16 @@ kyc__success --> Done
   assert.equal(report.files[0].dependencies[1].alias, "kyc");
 });
 
-test("report command supports directory mode with config filters", async () => {
+test("report command ignores shared and output directories when run from project root", async () => {
   const rootDir = await createWorkspace();
 
   await writeWorkspaceFile(
     rootDir,
     "mermaid-include.config.json",
     `{
-  "include": ["docs/**/*.md"],
-  "exclude": ["docs/drafts/**/*.md"]
+  "docsDir": "docs",
+  "sharedDir": "shared",
+  "outputDir": "dist"
 }
 `,
   );
@@ -637,8 +815,28 @@ test("report command supports directory mode with config filters", async () => {
     rootDir,
     "docs/one.md",
     `\`\`\`mermaid-include
-../shared/library.md#customer.overview
+customer.overview
 \`\`\`
+`,
+  );
+
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/library.md",
+    `<!-- mermaid:block customer.overview -->
+\`\`\`mermaid
+flowchart TD
+A --> B
+\`\`\`
+<!-- /mermaid:block -->
+
+<!-- mermaid:block customer.fragment type=fragment exports=entry,success -->
+\`\`\`mermaid
+flowchart TD
+entry[Start]
+entry --> success[Done]
+\`\`\`
+<!-- /mermaid:block -->
 `,
   );
 
@@ -648,7 +846,7 @@ test("report command supports directory mode with config filters", async () => {
     `\`\`\`mermaid
 flowchart LR
 Start --> flow__entry
-%% include: ../shared/library.md#customer.fragment as flow
+%% include: customer.fragment as flow
 flow__success --> Finish
 \`\`\`
 `,
@@ -656,15 +854,15 @@ flow__success --> Finish
 
   await writeWorkspaceFile(
     rootDir,
-    "docs/drafts/skip.md",
+    "dist/skip.md",
     `\`\`\`mermaid-include
-../shared/library.md#ignored.block
+ignored.block
 \`\`\`
 `,
   );
 
-  const { stdout } = await execFileAsync(process.execPath, [cliPath, "report", path.join(rootDir, "docs")], {
-    cwd: projectRoot,
+  const { stdout } = await execFileAsync(process.execPath, [cliPath, "report", rootDir], {
+    cwd: rootDir,
   });
 
   const report = JSON.parse(stdout);

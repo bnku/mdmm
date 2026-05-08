@@ -1,26 +1,27 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { extractBlocks } from "./blocks.js";
+import { MermaidIncludeError } from "./errors.js";
+import { loadProjectSettings } from "./project.js";
+import { resolveBlockReference, resolveReferenceText } from "./references.js";
+
 const INCLUDE_BLOCK_PATTERN = /```mermaid-include[^\n]*\r?\n([\s\S]*?)\r?\n```/g;
-const BLOCK_PATTERN = /<!--\s*mermaid:block\s+([A-Za-z0-9._-]+)([^>]*)-->\s*([\s\S]*?)\s*<!--\s*\/mermaid:block\s*-->/g;
 const MERMAID_FENCE_PATTERN = /```mermaid(?!-)([^\n]*)\r?\n([\s\S]*?)\r?\n```/g;
 const FRAGMENT_INCLUDE_PATTERN = /^\s*%%\s*include:\s+(\S+)(?:\s+as\s+([A-Za-z][A-Za-z0-9_-]*))?\s*$/;
 const MERMAID_INCLUDE_SENTINEL = "```mermaid-include";
 const FRAGMENT_INCLUDE_SENTINEL = /(^|\n)\s*%%\s*include:/m;
 
-export class MermaidIncludeError extends Error {
-  constructor(message, details = {}) {
-    super(message);
-    this.name = "MermaidIncludeError";
-    this.details = details;
-  }
-}
+export { MermaidIncludeError } from "./errors.js";
 
 export async function preprocessMarkdown(markdown, options) {
   const inputPath = path.resolve(options.inputPath);
+  const projectSettings = options.projectSettings ?? (await loadProjectSettings(inputPath, { cwd: options.cwd }));
   const context = {
     maxIncludeDepth: options.maxIncludeDepth ?? 5,
     fileCache: new Map(),
+    projectSettings,
+    sharedBlockIndexPromise: null,
   };
 
   const output = await resolveMarkdown(markdown, inputPath, context, []);
@@ -47,7 +48,7 @@ export async function preprocessFile(inputPath, outputPath, options = {}) {
 
 async function resolveMarkdown(markdown, currentFilePath, context, stack) {
   const withWholeDiagramIncludes = await replaceAsync(markdown, INCLUDE_BLOCK_PATTERN, async (match, rawReference) => {
-    const reference = parseBlockReference(rawReference, currentFilePath, "mermaid-include");
+    const reference = await resolveBlockReference(rawReference, currentFilePath, "mermaid-include", context);
     return resolveDiagramBlockReference(reference, context, stack);
   });
 
@@ -120,7 +121,8 @@ async function resolveFragmentIncludesInCode(body, currentFilePath, context, sta
       );
     }
 
-    const fragment = await resolveFragmentBlockReference(directive.reference, context, stack);
+    const reference = await resolveReferenceText(directive.referenceText, currentFilePath, "fragment include", context);
+    const fragment = await resolveFragmentBlockReference(reference, context, stack);
     validateExternalAliasReferences(nonDirectiveBody, directive.alias, fragment.exports, currentFilePath);
     usedAliases.add(directive.alias);
     outputLines.push(rewriteFragmentBody(fragment.body, directive.alias, fragment.nodeIds));
@@ -170,114 +172,6 @@ async function loadFileRecord(filePath, context) {
   return record;
 }
 
-function extractBlocks(markdown, filePath) {
-  const blocks = new Map();
-
-  for (const match of markdown.matchAll(BLOCK_PATTERN)) {
-    const blockId = match[1];
-    const attributes = parseBlockAttributes(match[2] ?? "");
-    const rawContent = match[3].trim();
-
-    if (blocks.has(blockId)) {
-      throw new MermaidIncludeError(
-        `Duplicate block id ${blockId} found in ${path.relative(process.cwd(), filePath)}`,
-        {
-          code: "DUPLICATE_BLOCK_ID",
-          blockId,
-        },
-      );
-    }
-
-    blocks.set(blockId, {
-      blockId,
-      filePath,
-      type: attributes.type ?? "diagram",
-      exports: attributes.exports ?? [],
-      rawContent,
-      resolvedDiagramContent: null,
-      resolvedFragment: null,
-    });
-  }
-
-  return blocks;
-}
-
-function parseBlockAttributes(rawAttributes) {
-  const attributes = {};
-  const tokens = rawAttributes.trim().split(/\s+/).filter(Boolean);
-
-  for (const token of tokens) {
-    const separatorIndex = token.indexOf("=");
-    if (separatorIndex === -1) {
-      continue;
-    }
-
-    const key = token.slice(0, separatorIndex);
-    const value = token.slice(separatorIndex + 1);
-
-    if (key === "type") {
-      attributes.type = value;
-      continue;
-    }
-
-    if (key === "exports") {
-      attributes.exports = value
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean);
-    }
-  }
-
-  return attributes;
-}
-
-function parseBlockReference(rawReference, currentFilePath, sourceName) {
-  const lines = rawReference
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  if (lines.length !== 1) {
-    throw new MermaidIncludeError(
-      `Each ${sourceName} block must contain exactly one non-empty reference in ${path.relative(process.cwd(), currentFilePath)}`,
-      {
-        code: "INVALID_INCLUDE_DIRECTIVE",
-      },
-    );
-  }
-
-  return parseSingleReference(lines[0], currentFilePath, sourceName);
-}
-
-function parseSingleReference(referenceText, currentFilePath, sourceName) {
-  const separatorIndex = referenceText.lastIndexOf("#");
-  if (separatorIndex === -1) {
-    throw new MermaidIncludeError(
-      `Invalid ${sourceName} reference ${JSON.stringify(referenceText)} in ${path.relative(process.cwd(), currentFilePath)}. Expected ./path/to/file.md#block-id`,
-      {
-        code: "INVALID_INCLUDE_REFERENCE",
-      },
-    );
-  }
-
-  const filePart = referenceText.slice(0, separatorIndex).trim();
-  const blockId = referenceText.slice(separatorIndex + 1).trim();
-
-  if (!filePart || !blockId) {
-    throw new MermaidIncludeError(
-      `Invalid ${sourceName} reference ${JSON.stringify(referenceText)} in ${path.relative(process.cwd(), currentFilePath)}. Expected ./path/to/file.md#block-id`,
-      {
-        code: "INVALID_INCLUDE_REFERENCE",
-      },
-    );
-  }
-
-  return {
-    filePath: path.resolve(path.dirname(currentFilePath), filePart),
-    blockId,
-  };
-}
-
 function parseFragmentIncludeDirective(line, currentFilePath) {
   const trimmed = line.trim();
 
@@ -305,7 +199,7 @@ function parseFragmentIncludeDirective(line, currentFilePath) {
   }
 
   return {
-    reference: parseSingleReference(match[1], currentFilePath, "fragment include"),
+    referenceText: match[1],
     alias: match[2],
   };
 }
