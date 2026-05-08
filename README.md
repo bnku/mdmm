@@ -1,10 +1,13 @@
 # Mermaid Include Sync
 
+CLI-утилита для переиспользования Mermaid-диаграмм и Mermaid-фрагментов в Markdown-документации.
+
 В этой папке теперь лежат planning-документы и рабочий прототип обоих этапов: include целых Mermaid-диаграмм и include Mermaid-фрагментов внутри большой диаграммы.
 
 ## Что уже есть
 
 - `./src/cli.js` — CLI с командами `build` и `check` для файлов и каталогов.
+- `./bin/mermaid-include-sync.js` — publishable entrypoint для локального запуска и будущего `npx`.
 - `./src/preprocess.js` — ядро препроцессора.
 - `./src/report.js` — сбор dependency report по include-использованию.
 - `./examples/shared/customer-verification.md` — библиотека канонических Mermaid-блоков.
@@ -82,6 +85,25 @@ kyc__success --> Done
 - `npm run build:examples` — рекурсивно собирает весь каталог `./examples` в `./examples/dist` с учетом конфига.
 - `npm run validate:examples` — валидирует оба собранных примера.
 - `npm run report:examples` — записывает JSON usage-map в `./examples/dist/dependencies.json`.
+- `npm run smoke:bin` — проверяет publishable CLI entrypoint.
+- `npm run pack:dry-run` — показывает, что именно попадет в npm-пакет.
+
+## CLI Usage
+
+Локально из репозитория:
+
+```bash
+./bin/mermaid-include-sync.js --help
+./bin/mermaid-include-sync.js build ./examples --output ./examples/dist
+./bin/mermaid-include-sync.js report ./examples --output ./examples/dist/dependencies.json
+```
+
+После публикации пакет будет запускаться как обычная CLI-утилита:
+
+```bash
+npx mermaid-include-sync --help
+npx mermaid-include-sync build ./docs --output ./dist/docs
+```
 
 ## Directory Mode
 

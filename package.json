@@ -1,19 +1,40 @@
 {
-  "name": "mm-test",
+  "name": "mermaid-include-sync",
   "version": "0.1.0",
-  "private": true,
+  "description": "CLI for reusable Mermaid includes in Markdown documentation",
+  "license": "UNLICENSED",
   "type": "module",
+  "bin": {
+    "mermaid-include-sync": "./bin/mermaid-include-sync.js"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "keywords": [
+    "mermaid",
+    "markdown",
+    "documentation",
+    "cli",
+    "transclusion"
+  ],
   "scripts": {
     "test": "node --test",
-    "build:example": "node ./src/cli.js build ./examples/docs/onboarding.md --output ./examples/dist/onboarding.md",
-    "check:example": "node ./src/cli.js check ./examples/docs/onboarding.md",
+    "build:example": "./bin/mermaid-include-sync.js build ./examples/docs/onboarding.md --output ./examples/dist/onboarding.md",
+    "check:example": "./bin/mermaid-include-sync.js check ./examples/docs/onboarding.md",
     "validate:example": "node ./scripts/validate-mermaid-cli.js ./examples/dist/onboarding.md",
-    "build:fragment-example": "node ./src/cli.js build ./examples/docs/journey.md --output ./examples/dist/journey.md",
-    "check:fragment-example": "node ./src/cli.js check ./examples/docs/journey.md",
+    "build:fragment-example": "./bin/mermaid-include-sync.js build ./examples/docs/journey.md --output ./examples/dist/journey.md",
+    "check:fragment-example": "./bin/mermaid-include-sync.js check ./examples/docs/journey.md",
     "validate:fragment-example": "node ./scripts/validate-mermaid-cli.js ./examples/dist/journey.md",
-    "build:examples": "node ./src/cli.js build ./examples --output ./examples/dist",
-    "check:examples": "node ./src/cli.js check ./examples",
+    "build:examples": "./bin/mermaid-include-sync.js build ./examples --output ./examples/dist",
+    "check:examples": "./bin/mermaid-include-sync.js check ./examples",
     "validate:examples": "node ./scripts/validate-mermaid-cli.js ./examples/dist/docs/onboarding.md ./examples/dist/docs/journey.md",
-    "report:examples": "node ./src/cli.js report ./examples --output ./examples/dist/dependencies.json"
+    "report:examples": "./bin/mermaid-include-sync.js report ./examples --output ./examples/dist/dependencies.json",
+    "smoke:bin": "./bin/mermaid-include-sync.js --help",
+    "pack:dry-run": "npm pack --dry-run"
   }
 }

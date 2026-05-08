@@ -2,6 +2,7 @@
 import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
+import { pathToFileURL } from "node:url";
 
 import { MermaidIncludeError, preprocessFile } from "./preprocess.js";
 import { buildDependencyReport } from "./report.js";
@@ -9,8 +10,7 @@ import { buildDependencyReport } from "./report.js";
 const CONFIG_FILE_NAME = "mermaid-include.config.json";
 const DEFAULT_INCLUDE_PATTERNS = ["**/*.md"];
 
-async function main() {
-  const argv = process.argv.slice(2);
+export async function main(argv = process.argv.slice(2)) {
   const command = argv[0];
 
   if (!command || command === "--help" || command === "-h") {
@@ -289,14 +289,16 @@ async function statInputPath(inputPath) {
 }
 
 function printHelp() {
+  const cliName = "mermaid-include-sync";
+
   process.stdout.write(
     [
       "Usage:",
-      "  node ./src/cli.js build <input.md> [--output <output.md>] [--max-include-depth <n>]",
-      "  node ./src/cli.js build <input-dir> --output <output-dir> [--max-include-depth <n>]",
-      "  node ./src/cli.js check <input.md> [--max-include-depth <n>]",
-      "  node ./src/cli.js check <input-dir> [--max-include-depth <n>]",
-      "  node ./src/cli.js report <input.md|input-dir> [--output <report.json>]",
+      `  ${cliName} build <input.md> [--output <output.md>] [--max-include-depth <n>]`,
+      `  ${cliName} build <input-dir> --output <output-dir> [--max-include-depth <n>]`,
+      `  ${cliName} check <input.md> [--max-include-depth <n>]`,
+      `  ${cliName} check <input-dir> [--max-include-depth <n>]`,
+      `  ${cliName} report <input.md|input-dir> [--output <report.json>]`,
       "",
       `Config file: ${CONFIG_FILE_NAME}`,
       "  include/exclude patterns are applied in directory mode",
@@ -310,7 +312,15 @@ function printHelp() {
   );
 }
 
-main().catch((error) => {
+export async function runCli(argv = process.argv.slice(2)) {
+  try {
+    await main(argv);
+  } catch (error) {
+    handleCliError(error);
+  }
+}
+
+function handleCliError(error) {
   if (error instanceof MermaidIncludeError) {
     process.stderr.write(`Error: ${error.message}\n`);
     process.exitCode = 1;
@@ -318,4 +328,8 @@ main().catch((error) => {
   }
 
   throw error;
-});
+}
+
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+  runCli();
+}
