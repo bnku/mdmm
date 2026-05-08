@@ -1,27 +1,27 @@
 # Fragment Include
 
-Базовый фрагмент по short ref:
+Base fragment via short ref:
 
 ```mermaid
 flowchart LR
-Start[Получить заявку] --> kyc__entry
-kyc__entry[Начать верификацию]
-kyc__entry --> kyc__check{Документы валидны?}
-kyc__check -- Да --> kyc__success[Верификация пройдена]
-kyc__check -- Нет --> kyc__fail[Нужны корректировки]
-kyc__success --> Offer[Продолжить оформление]
-kyc__fail --> Rework[Вернуть на доработку]
+Start[Receive request] --> kyc__entry
+kyc__entry[Start verification]
+kyc__entry --> kyc__check{Are the documents valid?}
+kyc__check -- Yes --> kyc__success[Verification passed]
+kyc__check -- No --> kyc__fail[Corrections required]
+kyc__success --> Offer[Continue processing]
+kyc__fail --> Rework[Return for rework]
 ```
 
-Тот же базовый фрагмент по explicit path ref:
+The same base fragment via explicit path ref:
 
 ```mermaid
 flowchart LR
-Start[Получить заявку] --> explicit__entry
-explicit__entry[Начать верификацию]
-explicit__entry --> explicit__check{Документы валидны?}
-explicit__check -- Да --> explicit__success[Верификация пройдена]
-explicit__check -- Нет --> explicit__fail[Нужны корректировки]
-explicit__success --> Offer[Продолжить оформление]
-explicit__fail --> Rework[Вернуть на доработку]
+Start[Receive request] --> explicit__entry
+explicit__entry[Start verification]
+explicit__entry --> explicit__check{Are the documents valid?}
+explicit__check -- Yes --> explicit__success[Verification passed]
+explicit__check -- No --> explicit__fail[Corrections required]
+explicit__success --> Offer[Continue processing]
+explicit__fail --> Rework[Return for rework]
 ```

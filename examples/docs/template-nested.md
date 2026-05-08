@@ -1,18 +1,18 @@
 # Template Nested
 
-Nested include с short `fragmentRef`:
+Nested include with short `fragmentRef`:
 
 ```mermaid-include
 template.wrapper fragmentRef=template.audit-fragment reviewer=Legal
 ```
 
-Nested include с другим short `fragmentRef`:
+Nested include with another short `fragmentRef`:
 
 ```mermaid-include
 template.wrapper fragmentRef=template.verification-fragment reviewer=Legal
 ```
 
-Nested include с explicit path `fragmentRef`:
+Nested include with explicit path `fragmentRef`:
 
 ```mermaid-include
 template.wrapper

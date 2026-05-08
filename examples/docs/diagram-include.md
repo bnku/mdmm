@@ -1,12 +1,12 @@
-# Whole Include
+# Diagram Include
 
-Каноническая диаграмма по short ref:
+Canonical diagram via short ref:
 
 ```mermaid-include
 customer-verification.overview
 ```
 
-Короткий подпроцесс по explicit path ref:
+Short subprocess via explicit path ref:
 
 ```mermaid-include
 ../shared/customer-verification.md#customer-verification.short

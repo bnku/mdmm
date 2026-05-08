@@ -14,13 +14,13 @@ CLI-утилита `mdmm` для переиспользования Mermaid-ди
 - `./examples/shared/customer-verification.md` — библиотека канонических Mermaid-блоков.
 - `./examples/shared/customer-templates.md` — библиотека шаблонных Mermaid-блоков и фрагментов.
 - `./examples/mdmm.config.json` — пример project-config для docs/shared/output директорий.
-- `./examples/docs/whole-include.md` — обычный whole-diagram include: short refs и explicit refs.
+- `./examples/docs/diagram-include.md` — обычный diagram include: short refs и explicit refs.
 - `./examples/docs/fragment-include.md` — обычный fragment include: short refs и explicit refs.
-- `./examples/docs/template-whole.md` — whole-diagram templates: one-line args, multiline args и explicit refs.
+- `./examples/docs/template-diagram.md` — diagram templates: one-line args, multiline args и explicit refs.
 - `./examples/docs/template-fragment.md` — fragment templates: one-line args, multiline args и explicit refs.
 - `./examples/docs/template-nested.md` — nested forwarding через `fragmentRef` с short и explicit path ссылками.
 - `./test/preprocess.test.js` — автоматические тесты на позитивные и негативные сценарии.
-- `./docs/mdmm/` — planning-пакет по этапам 1 и 2.
+- `./.docs/mdmm/` — planning-пакет по этапам 1 и 2.
 
 ## Синтаксис v1
 
@@ -119,7 +119,7 @@ review -->|Эскалация| escalator["%escalator|Head of Operations%"]
 - `%name%` — обязательный аргумент;
 - `%name|Default value%` — аргумент с дефолтом.
 
-Whole-diagram include, compact one-line form:
+Diagram include, compact one-line form:
 
 ````md
 ```mermaid-include
@@ -129,7 +129,7 @@ customer-verification.overview owner="Risk Ops" reviewer=Legal
 
 Значения с пробелами в compact one-line форме нужно брать в кавычки.
 
-Whole-diagram include, multiline form:
+Diagram include, multiline form:
 
 ````md
 ```mermaid-include
@@ -201,7 +201,7 @@ review.wrapper fragmentRef=../shared/library.md#audit.fragment reviewer=Legal
 - пропущенный обязательный аргумент вызывает ошибку;
 - повторное объявление одного и того же аргумента вызывает ошибку;
 - при nested forwarding override-блок тоже должен принимать forwarded args по тем же именам;
-- `report` сохраняет переданные `args` для whole и fragment include.
+- `report` сохраняет переданные `args` для diagram и fragment include.
 
 Рекомендации по authoring:
 
@@ -342,14 +342,14 @@ CLI умеет строить JSON-отчет по использованию in
 - список Markdown-файлов и их зависимостей;
 - тип зависимости: `diagram` или `fragment`;
 - исходная ссылка автора, `block id`, целевой файл и `alias` для fragment include;
-- переданные template `args` для whole и fragment include;
+- переданные template `args` для diagram и fragment include;
 - сводка `block -> usedBy`, чтобы быстро видеть usage-map общей библиотеки.
 
 ## Ограничения текущей версии
 
 - Канонический блок в итоге должен разворачиваться ровно в один ` ```mermaid ` fenced block.
 - Include может задаваться либо short ref вида `block-id`, либо явной ссылкой `path/to/file.md#block-id`.
-- Whole и fragment include поддерживают template args в one-line и multiline форме.
+- Diagram и fragment include поддерживают template args в one-line и multiline форме.
 - Глубина вложенных include ограничена параметром `--max-include-depth` и по умолчанию равна `5`.
 - Для fragment include поддерживаются только явно экспортированные узлы.
 - Alias должен быть уникальным внутри одного ` ```mermaid ` блока.
@@ -358,7 +358,7 @@ CLI умеет строить JSON-отчет по использованию in
 
 ## Planning-документы
 
-- `./docs/mdmm/00-roadmap.md` — общий roadmap по двум этапам.
-- `./docs/01-intro-and-architecture.md` — вводный документ с архитектурными решениями и ограничениями.
-- `./docs/mdmm/todo/01-whole-diagram-includes.md` — задача на первый этап.
-- `./docs/mdmm/todo/02-fragment-includes.md` — задача на второй этап.
+- `./.docs/mdmm/00-roadmap.md` — общий roadmap по двум этапам.
+- `./.docs/01-intro-and-architecture.md` — вводный документ с архитектурными решениями и ограничениями.
+- `./.docs/mdmm/todo/01-diagram-includes.md` — задача на первый этап.
+- `./.docs/mdmm/todo/02-fragment-includes.md` — задача на второй этап.

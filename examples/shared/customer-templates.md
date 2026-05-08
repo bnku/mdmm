@@ -1,12 +1,12 @@
-# Шаблонная библиотека Mermaid
+# Mermaid Template Library
 
 <!-- mermaid:block template.customer-overview -->
 ```mermaid
 flowchart TD
-start([Старт]) --> owner["%owner%"]
-owner --> review{"Проверка %reviewer|Finance%"}
-review -->|OK| done([Готово])
-review -->|Эскалация| escalator["%escalator|Head of Operations%"]
+start([Start]) --> owner["%owner%"]
+owner --> review{"Review by %reviewer|Finance%"}
+review -->|OK| done([Done])
+review -->|Escalate| escalator["%escalator|Head of Operations%"]
 escalator --> done
 ```
 <!-- /mermaid:block -->
@@ -15,16 +15,16 @@ escalator --> done
 ```mermaid
 flowchart TD
 entry["%owner|Sales Ops%"]
-entry --> review{"Проверка %reviewer|Finance%"}
-review --> done["Решение для %owner|Sales Ops%"]
+entry --> review{"Review by %reviewer|Finance%"}
+review --> done["Decision for %owner|Sales Ops%"]
 ```
 <!-- /mermaid:block -->
 
 <!-- mermaid:block template.audit-fragment type=fragment exports=entry,done -->
 ```mermaid
 flowchart TD
-entry["Аудит %owner|Sales Ops%: %reviewer|Finance%"]
-entry --> done["Закрыть"]
+entry["Audit %owner|Sales Ops%: %reviewer|Finance%"]
+entry --> done["Close"]
 ```
 <!-- /mermaid:block -->
 

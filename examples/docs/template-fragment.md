@@ -1,6 +1,6 @@
 # Template Fragment
 
-Шаблонный fragment include в compact one-line форме:
+Templated fragment include in compact one-line form:
 
 ```mermaid
 flowchart LR
@@ -9,7 +9,7 @@ Start --> risk__entry
 risk__done --> End
 ```
 
-Шаблонный fragment include по explicit path и multiline args:
+Templated fragment include via explicit path with multiline args:
 
 ```mermaid
 flowchart LR

@@ -6,7 +6,7 @@ import { MermaidIncludeError } from "./errors.js";
 const ARG_KEY_PATTERN = /^[A-Za-z][A-Za-z0-9_-]*/;
 const FRAGMENT_INCLUDE_PREFIX = "%% include:";
 
-export function parseWholeIncludeDirective(rawReference, currentFilePath, sourceName) {
+export function parseDiagramIncludeDirective(rawReference, currentFilePath, sourceName) {
   const lines = rawReference
     .split(/\r?\n/)
     .map((line) => line.trim())

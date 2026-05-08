@@ -4,10 +4,10 @@ import process from "node:process";
 
 import { extractBlocks } from "./blocks.js";
 import { MermaidIncludeError } from "./errors.js";
-import { parseWholeIncludeDirective } from "./include-parser.js";
+import { parseDiagramIncludeDirective } from "./include-parser.js";
 
 export async function resolveBlockReference(rawReference, currentFilePath, sourceName, context) {
-  const directive = parseWholeIncludeDirective(rawReference, currentFilePath, sourceName);
+  const directive = parseDiagramIncludeDirective(rawReference, currentFilePath, sourceName);
   const reference = await resolveReferenceText(directive.referenceText, currentFilePath, sourceName, context);
   return {
     ...reference,

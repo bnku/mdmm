@@ -27,7 +27,7 @@
     "test": "node --test",
     "build:examples": "./bin/mdmm.js build ./examples --output ./examples/dist",
     "check:examples": "./bin/mdmm.js check ./examples",
-    "validate:examples": "node ./scripts/validate-mermaid-cli.js ./examples/dist/docs/whole-include.md ./examples/dist/docs/fragment-include.md ./examples/dist/docs/template-whole.md ./examples/dist/docs/template-fragment.md ./examples/dist/docs/template-nested.md",
+    "validate:examples": "node ./scripts/validate-mermaid-cli.js ./examples/dist/docs/diagram-include.md ./examples/dist/docs/fragment-include.md ./examples/dist/docs/template-diagram.md ./examples/dist/docs/template-fragment.md ./examples/dist/docs/template-nested.md",
     "report:examples": "./bin/mdmm.js report ./examples --output ./examples/dist/dependencies.json",
     "smoke:bin": "./bin/mdmm.js --help",
     "pack:dry-run": "npm pack --dry-run"

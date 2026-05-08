@@ -1,18 +1,18 @@
-# Shared Diagram Library
+# Diagram Include
 
-<!-- mermaid:block customer-verification.overview -->
+Canonical diagram via short ref:
+
 ```mermaid
 flowchart TD
 A[Collect documents] --> B{Are the documents valid?}
 B -- Yes --> C[Approve customer]
 B -- No --> D[Request corrections]
 ```
-<!-- /mermaid:block -->
 
-<!-- mermaid:block customer-verification.short -->
+Short subprocess via explicit path ref:
+
 ```mermaid
 flowchart LR
 Start[Receive request] --> Review[Review documents]
 Review --> Done[Record result]
 ```
-<!-- /mermaid:block -->

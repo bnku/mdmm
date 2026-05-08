@@ -48,12 +48,12 @@ export async function preprocessFile(inputPath, outputPath, options = {}) {
 }
 
 async function resolveMarkdown(markdown, currentFilePath, context, stack) {
-  const withWholeDiagramIncludes = await replaceAsync(markdown, INCLUDE_BLOCK_PATTERN, async (match, rawReference) => {
+  const withDiagramIncludes = await replaceAsync(markdown, INCLUDE_BLOCK_PATTERN, async (match, rawReference) => {
     const reference = await resolveBlockReference(rawReference, currentFilePath, "mermaid-include", context);
     return resolveDiagramBlockReference(reference, context, stack);
   });
 
-  return replaceAsync(withWholeDiagramIncludes, MERMAID_FENCE_PATTERN, async (match, infoSuffix, body) => {
+  return replaceAsync(withDiagramIncludes, MERMAID_FENCE_PATTERN, async (match, infoSuffix, body) => {
     const resolvedBody = await resolveFragmentIncludesInCode(body, currentFilePath, context, stack);
     return buildFence("mermaid", infoSuffix, resolvedBody);
   });

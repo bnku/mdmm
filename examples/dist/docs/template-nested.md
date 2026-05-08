@@ -1,32 +1,32 @@
 # Template Nested
 
-Nested include с short `fragmentRef`:
+Nested include with short `fragmentRef`:
 
 ```mermaid
 flowchart LR
 Start --> lane__entry
-lane__entry["Аудит Sales Ops: Legal"]
-lane__entry --> lane__done["Закрыть"]
+lane__entry["Audit Sales Ops: Legal"]
+lane__entry --> lane__done["Close"]
 lane__done --> End
 ```
 
-Nested include с другим short `fragmentRef`:
+Nested include with another short `fragmentRef`:
 
 ```mermaid
 flowchart LR
 Start --> lane__entry
 lane__entry["Sales Ops"]
-lane__entry --> lane__review{"Проверка Legal"}
-lane__review --> lane__done["Решение для Sales Ops"]
+lane__entry --> lane__review{"Review by Legal"}
+lane__review --> lane__done["Decision for Sales Ops"]
 lane__done --> End
 ```
 
-Nested include с explicit path `fragmentRef`:
+Nested include with explicit path `fragmentRef`:
 
 ```mermaid
 flowchart LR
 Start --> lane__entry
-lane__entry["Аудит Risk Ops: Legal"]
-lane__entry --> lane__done["Закрыть"]
+lane__entry["Audit Risk Ops: Legal"]
+lane__entry --> lane__done["Close"]
 lane__done --> End
 ```

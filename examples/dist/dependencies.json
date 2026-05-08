@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-08T21:08:20.743Z",
+  "generatedAt": "2026-05-08T21:16:38.578Z",
   "rootPath": "examples",
   "summary": {
     "fileCount": 5,
@@ -7,6 +7,28 @@
     "blockCount": 6
   },
   "files": [
+    {
+      "path": "examples/docs/diagram-include.md",
+      "dependencyCount": 2,
+      "dependencies": [
+        {
+          "type": "diagram",
+          "reference": "customer-verification.overview",
+          "target": "examples/shared/customer-verification.md",
+          "blockId": "customer-verification.overview",
+          "alias": null,
+          "args": {}
+        },
+        {
+          "type": "diagram",
+          "reference": "../shared/customer-verification.md#customer-verification.short",
+          "target": "examples/shared/customer-verification.md",
+          "blockId": "customer-verification.short",
+          "alias": null,
+          "args": {}
+        }
+      ]
+    },
     {
       "path": "examples/docs/fragment-include.md",
       "dependencyCount": 2,
@@ -26,6 +48,46 @@
           "blockId": "verification-fragment.fragment",
           "alias": "explicit",
           "args": {}
+        }
+      ]
+    },
+    {
+      "path": "examples/docs/template-diagram.md",
+      "dependencyCount": 3,
+      "dependencies": [
+        {
+          "type": "diagram",
+          "reference": "template.customer-overview",
+          "target": "examples/shared/customer-templates.md",
+          "blockId": "template.customer-overview",
+          "alias": null,
+          "args": {
+            "owner": "Risk Ops",
+            "reviewer": "Legal"
+          }
+        },
+        {
+          "type": "diagram",
+          "reference": "template.customer-overview",
+          "target": "examples/shared/customer-templates.md",
+          "blockId": "template.customer-overview",
+          "alias": null,
+          "args": {
+            "escalator": "Head of Operations",
+            "owner": "Sales Ops"
+          }
+        },
+        {
+          "type": "diagram",
+          "reference": "../shared/customer-templates.md#template.customer-overview",
+          "target": "examples/shared/customer-templates.md",
+          "blockId": "template.customer-overview",
+          "alias": null,
+          "args": {
+            "escalator": "COO",
+            "owner": "Customer Success",
+            "reviewer": "Compliance"
+          }
         }
       ]
     },
@@ -96,68 +158,6 @@
           }
         }
       ]
-    },
-    {
-      "path": "examples/docs/template-whole.md",
-      "dependencyCount": 3,
-      "dependencies": [
-        {
-          "type": "diagram",
-          "reference": "template.customer-overview",
-          "target": "examples/shared/customer-templates.md",
-          "blockId": "template.customer-overview",
-          "alias": null,
-          "args": {
-            "owner": "Risk Ops",
-            "reviewer": "Legal"
-          }
-        },
-        {
-          "type": "diagram",
-          "reference": "template.customer-overview",
-          "target": "examples/shared/customer-templates.md",
-          "blockId": "template.customer-overview",
-          "alias": null,
-          "args": {
-            "escalator": "Head of Operations",
-            "owner": "Sales Ops"
-          }
-        },
-        {
-          "type": "diagram",
-          "reference": "../shared/customer-templates.md#template.customer-overview",
-          "target": "examples/shared/customer-templates.md",
-          "blockId": "template.customer-overview",
-          "alias": null,
-          "args": {
-            "escalator": "COO",
-            "owner": "Customer Success",
-            "reviewer": "Compliance"
-          }
-        }
-      ]
-    },
-    {
-      "path": "examples/docs/whole-include.md",
-      "dependencyCount": 2,
-      "dependencies": [
-        {
-          "type": "diagram",
-          "reference": "customer-verification.overview",
-          "target": "examples/shared/customer-verification.md",
-          "blockId": "customer-verification.overview",
-          "alias": null,
-          "args": {}
-        },
-        {
-          "type": "diagram",
-          "reference": "../shared/customer-verification.md#customer-verification.short",
-          "target": "examples/shared/customer-verification.md",
-          "blockId": "customer-verification.short",
-          "alias": null,
-          "args": {}
-        }
-      ]
     }
   ],
   "blocks": [
@@ -167,7 +167,7 @@
       "useCount": 3,
       "usedBy": [
         {
-          "path": "examples/docs/template-whole.md",
+          "path": "examples/docs/template-diagram.md",
           "type": "diagram",
           "alias": null,
           "reference": "../shared/customer-templates.md#template.customer-overview",
@@ -178,7 +178,7 @@
           }
         },
         {
-          "path": "examples/docs/template-whole.md",
+          "path": "examples/docs/template-diagram.md",
           "type": "diagram",
           "alias": null,
           "reference": "template.customer-overview",
@@ -188,7 +188,7 @@
           }
         },
         {
-          "path": "examples/docs/template-whole.md",
+          "path": "examples/docs/template-diagram.md",
           "type": "diagram",
           "alias": null,
           "reference": "template.customer-overview",
@@ -270,7 +270,7 @@
       "useCount": 1,
       "usedBy": [
         {
-          "path": "examples/docs/whole-include.md",
+          "path": "examples/docs/diagram-include.md",
           "type": "diagram",
           "alias": null,
           "reference": "customer-verification.overview",
@@ -284,7 +284,7 @@
       "useCount": 1,
       "usedBy": [
         {
-          "path": "examples/docs/whole-include.md",
+          "path": "examples/docs/diagram-include.md",
           "type": "diagram",
           "alias": null,
           "reference": "../shared/customer-verification.md#customer-verification.short",

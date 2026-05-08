@@ -1,21 +1,21 @@
 # Fragment Include
 
-Базовый фрагмент по short ref:
+Base fragment via short ref:
 
 ```mermaid
 flowchart LR
-Start[Получить заявку] --> kyc__entry
+Start[Receive request] --> kyc__entry
 %% include: verification-fragment.fragment as kyc
-kyc__success --> Offer[Продолжить оформление]
-kyc__fail --> Rework[Вернуть на доработку]
+kyc__success --> Offer[Continue processing]
+kyc__fail --> Rework[Return for rework]
 ```
 
-Тот же базовый фрагмент по explicit path ref:
+The same base fragment via explicit path ref:
 
 ```mermaid
 flowchart LR
-Start[Получить заявку] --> explicit__entry
+Start[Receive request] --> explicit__entry
 %% include: ../shared/verification-fragment.md#verification-fragment.fragment as explicit
-explicit__success --> Offer[Продолжить оформление]
-explicit__fail --> Rework[Вернуть на доработку]
+explicit__success --> Offer[Continue processing]
+explicit__fail --> Rework[Return for rework]
 ```

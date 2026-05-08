@@ -1,10 +1,10 @@
-# Фрагмент верификации
+# Verification Fragment
 <!-- mermaid:block verification-fragment.fragment type=fragment exports=entry,success,fail -->
 ```mermaid
 flowchart TD
-entry[Начать верификацию]
-entry --> check{Документы валидны?}
-check -- Да --> success[Верификация пройдена]
-check -- Нет --> fail[Нужны корректировки]
+entry[Start verification]
+entry --> check{Are the documents valid?}
+check -- Yes --> success[Verification passed]
+check -- No --> fail[Corrections required]
 ```
 <!-- /mermaid:block -->

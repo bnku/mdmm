@@ -322,7 +322,7 @@ Base --> Done
   assert.match(output, /Base --> Done/);
 });
 
-test("builds whole-diagram templates with inline and multiline arguments", async () => {
+test("builds diagram templates with inline and multiline arguments", async () => {
   const rootDir = await createWorkspace();
 
   await writeWorkspaceFile(
@@ -800,7 +800,7 @@ kyc__hidden --> End
   });
 });
 
-test("fails when whole-diagram include targets a fragment block", async () => {
+test("fails when diagram include targets a fragment block", async () => {
   const rootDir = await createWorkspace();
 
   await writeWorkspaceFile(
