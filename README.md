@@ -6,6 +6,7 @@
 
 - `./src/cli.js` — CLI с командами `build` и `check` для файлов и каталогов.
 - `./src/preprocess.js` — ядро препроцессора.
+- `./src/report.js` — сбор dependency report по include-использованию.
 - `./examples/shared/customer-verification.md` — библиотека канонических Mermaid-блоков.
 - `./examples/mermaid-include.config.json` — пример include/exclude-конфига для bulk-сборки.
 - `./examples/docs/onboarding.md` — пример include целой диаграммы.
@@ -80,6 +81,7 @@ kyc__success --> Done
 - `npm run check:examples` — рекурсивно проверяет весь каталог `./examples` с учетом конфига.
 - `npm run build:examples` — рекурсивно собирает весь каталог `./examples` в `./examples/dist` с учетом конфига.
 - `npm run validate:examples` — валидирует оба собранных примера.
+- `npm run report:examples` — записывает JSON usage-map в `./examples/dist/dependencies.json`.
 
 ## Directory Mode
 
@@ -111,6 +113,23 @@ node ./src/cli.js build ./examples --output ./examples/dist
 ```
 
 Если на вход подан каталог, CLI рекурсивно обрабатывает все `.md`-файлы и сохраняет относительные пути в выходном каталоге. Поэтому при сборке `./examples` файлы попадают в `./examples/dist/docs/...`, а не прямо в `./examples/dist/...`.
+
+## Dependency Report
+
+CLI умеет строить JSON-отчет по использованию include-директив.
+
+Пример:
+
+```bash
+node ./src/cli.js report ./examples --output ./examples/dist/dependencies.json
+```
+
+Что попадает в отчет:
+
+- список Markdown-файлов и их зависимостей;
+- тип зависимости: `diagram` или `fragment`;
+- `block id`, целевой файл и `alias` для fragment include;
+- сводка `block -> usedBy`, чтобы быстро видеть usage-map общей библиотеки.
 
 ## Ограничения текущей версии
 

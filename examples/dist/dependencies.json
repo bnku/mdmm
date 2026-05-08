@@ -1,0 +1,85 @@
+{
+  "generatedAt": "2026-05-08T18:15:18.633Z",
+  "rootPath": "examples",
+  "summary": {
+    "fileCount": 2,
+    "dependencyCount": 3,
+    "blockCount": 3
+  },
+  "files": [
+    {
+      "path": "examples/docs/journey.md",
+      "dependencyCount": 1,
+      "dependencies": [
+        {
+          "type": "fragment",
+          "reference": "../shared/verification-fragment.md#verification-fragment.fragment",
+          "target": "examples/shared/verification-fragment.md",
+          "blockId": "verification-fragment.fragment",
+          "alias": "kyc"
+        }
+      ]
+    },
+    {
+      "path": "examples/docs/onboarding.md",
+      "dependencyCount": 2,
+      "dependencies": [
+        {
+          "type": "diagram",
+          "reference": "../shared/customer-verification.md#customer-verification.overview",
+          "target": "examples/shared/customer-verification.md",
+          "blockId": "customer-verification.overview",
+          "alias": null
+        },
+        {
+          "type": "diagram",
+          "reference": "../shared/customer-verification.md#customer-verification.short",
+          "target": "examples/shared/customer-verification.md",
+          "blockId": "customer-verification.short",
+          "alias": null
+        }
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "target": "examples/shared/customer-verification.md",
+      "blockId": "customer-verification.overview",
+      "useCount": 1,
+      "usedBy": [
+        {
+          "path": "examples/docs/onboarding.md",
+          "type": "diagram",
+          "alias": null,
+          "reference": "../shared/customer-verification.md#customer-verification.overview"
+        }
+      ]
+    },
+    {
+      "target": "examples/shared/customer-verification.md",
+      "blockId": "customer-verification.short",
+      "useCount": 1,
+      "usedBy": [
+        {
+          "path": "examples/docs/onboarding.md",
+          "type": "diagram",
+          "alias": null,
+          "reference": "../shared/customer-verification.md#customer-verification.short"
+        }
+      ]
+    },
+    {
+      "target": "examples/shared/verification-fragment.md",
+      "blockId": "verification-fragment.fragment",
+      "useCount": 1,
+      "usedBy": [
+        {
+          "path": "examples/docs/journey.md",
+          "type": "fragment",
+          "alias": "kyc",
+          "reference": "../shared/verification-fragment.md#verification-fragment.fragment"
+        }
+      ]
+    }
+  ]
+}

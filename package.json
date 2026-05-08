@@ -13,6 +13,7 @@
     "validate:fragment-example": "node ./scripts/validate-mermaid-cli.js ./examples/dist/journey.md",
     "build:examples": "node ./src/cli.js build ./examples --output ./examples/dist",
     "check:examples": "node ./src/cli.js check ./examples",
-    "validate:examples": "node ./scripts/validate-mermaid-cli.js ./examples/dist/docs/onboarding.md ./examples/dist/docs/journey.md"
+    "validate:examples": "node ./scripts/validate-mermaid-cli.js ./examples/dist/docs/onboarding.md ./examples/dist/docs/journey.md",
+    "report:examples": "node ./src/cli.js report ./examples --output ./examples/dist/dependencies.json"
   }
 }

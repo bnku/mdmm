@@ -1,9 +1,10 @@
 #!/usr/bin/env node
-import { readdir, readFile, stat } from "node:fs/promises";
+import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
 import { MermaidIncludeError, preprocessFile } from "./preprocess.js";
+import { buildDependencyReport } from "./report.js";
 
 const CONFIG_FILE_NAME = "mermaid-include.config.json";
 const DEFAULT_INCLUDE_PATTERNS = ["**/*.md"];
@@ -17,7 +18,7 @@ async function main() {
     return;
   }
 
-  if (command !== "build" && command !== "check") {
+  if (command !== "build" && command !== "check" && command !== "report") {
     throw new MermaidIncludeError(`Unknown command: ${command}`, {
       code: "UNKNOWN_COMMAND",
     });
@@ -32,6 +33,11 @@ async function main() {
 
   const inputPath = path.resolve(parsed.inputPath);
   const inputStats = await statInputPath(inputPath);
+
+  if (command === "report") {
+    await handleReportCommand(inputPath, inputStats, parsed);
+    return;
+  }
 
   if (inputStats.isDirectory()) {
     await handleDirectoryCommand(command, inputPath, parsed);
@@ -56,6 +62,29 @@ async function main() {
   }
 
   process.stdout.write(`Built ${path.relative(process.cwd(), path.resolve(parsed.outputPath))}\n`);
+}
+
+async function handleReportCommand(inputPath, inputStats, parsed) {
+  const filePaths = inputStats.isDirectory()
+    ? filterMarkdownFiles(await listMarkdownFiles(inputPath), inputPath, await loadDirectoryConfig(inputPath))
+    : [inputPath];
+
+  const report = await buildDependencyReport(filePaths, {
+    cwd: process.cwd(),
+    rootPath: inputPath,
+  });
+
+  const output = `${JSON.stringify(report, null, 2)}\n`;
+
+  if (parsed.outputPath) {
+    const outputPath = path.resolve(parsed.outputPath);
+    await mkdir(path.dirname(outputPath), { recursive: true });
+    await writeFile(outputPath, output, "utf8");
+    process.stdout.write(`Wrote ${path.relative(process.cwd(), outputPath)}\n`);
+    return;
+  }
+
+  process.stdout.write(output);
 }
 
 async function handleDirectoryCommand(command, inputPath, parsed) {
@@ -267,6 +296,7 @@ function printHelp() {
       "  node ./src/cli.js build <input-dir> --output <output-dir> [--max-include-depth <n>]",
       "  node ./src/cli.js check <input.md> [--max-include-depth <n>]",
       "  node ./src/cli.js check <input-dir> [--max-include-depth <n>]",
+      "  node ./src/cli.js report <input.md|input-dir> [--output <report.json>]",
       "",
       `Config file: ${CONFIG_FILE_NAME}`,
       "  include/exclude patterns are applied in directory mode",
@@ -275,6 +305,7 @@ function printHelp() {
       "Commands:",
       "  build  Resolve include directives and write Markdown output",
       "  check  Resolve include directives without writing a file",
+      "  report Build a JSON dependency report for include usage",
     ].join("\n") + "\n",
   );
 }

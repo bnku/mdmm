@@ -580,3 +580,91 @@ test("directory mode rejects invalid config json", async () => {
     },
   );
 });
+
+test("report command returns dependency map for a single file", async () => {
+  const rootDir = await createWorkspace();
+  const inputPath = await writeWorkspaceFile(
+    rootDir,
+    "docs/journey.md",
+    `# Journey
+
+\`\`\`mermaid-include
+../shared/library.md#customer.overview
+\`\`\`
+
+\`\`\`mermaid
+flowchart LR
+Start --> kyc__entry
+%% include: ../shared/library.md#customer.fragment as kyc
+kyc__success --> Done
+\`\`\`
+`,
+  );
+
+  const { stdout } = await execFileAsync(process.execPath, [cliPath, "report", inputPath], {
+    cwd: projectRoot,
+  });
+
+  const report = JSON.parse(stdout);
+  assert.equal(report.summary.fileCount, 1);
+  assert.equal(report.summary.dependencyCount, 2);
+  assert.equal(report.summary.blockCount, 2);
+  assert.equal(report.files[0].dependencies[0].type, "diagram");
+  assert.equal(report.files[0].dependencies[1].type, "fragment");
+  assert.equal(report.files[0].dependencies[1].alias, "kyc");
+});
+
+test("report command supports directory mode with config filters", async () => {
+  const rootDir = await createWorkspace();
+
+  await writeWorkspaceFile(
+    rootDir,
+    "mermaid-include.config.json",
+    `{
+  "include": ["docs/**/*.md"],
+  "exclude": ["docs/drafts/**/*.md"]
+}
+`,
+  );
+
+  await writeWorkspaceFile(
+    rootDir,
+    "docs/one.md",
+    `\`\`\`mermaid-include
+../shared/library.md#customer.overview
+\`\`\`
+`,
+  );
+
+  await writeWorkspaceFile(
+    rootDir,
+    "docs/two.md",
+    `\`\`\`mermaid
+flowchart LR
+Start --> flow__entry
+%% include: ../shared/library.md#customer.fragment as flow
+flow__success --> Finish
+\`\`\`
+`,
+  );
+
+  await writeWorkspaceFile(
+    rootDir,
+    "docs/drafts/skip.md",
+    `\`\`\`mermaid-include
+../shared/library.md#ignored.block
+\`\`\`
+`,
+  );
+
+  const { stdout } = await execFileAsync(process.execPath, [cliPath, "report", path.join(rootDir, "docs")], {
+    cwd: projectRoot,
+  });
+
+  const report = JSON.parse(stdout);
+  assert.equal(report.summary.fileCount, 2);
+  assert.equal(report.summary.dependencyCount, 2);
+  assert.equal(report.blocks.length, 2);
+  assert.equal(report.blocks[0].usedBy.length, 1);
+  assert.ok(report.files.every((file) => !file.path.endsWith("skip.md")));
+});
