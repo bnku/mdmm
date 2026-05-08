@@ -1471,7 +1471,8 @@ test("cli without arguments prints help and next steps", async () => {
 
   assert.match(stdout, /Usage:/);
   assert.match(stdout, /Quick start:/);
-  assert.match(stdout, /npx mdmm@latest init/);
+  assert.match(stdout, /npm i -g @bnku\/mdmm && mdmm init/);
+  assert.match(stdout, /npx @bnku\/mdmm@latest init/);
 });
 
 test("cli prints package version", async () => {

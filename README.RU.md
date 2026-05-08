@@ -33,11 +33,12 @@
 ## Быстрый старт
 
 ```bash
-npx mdmm
+npm i -g @bnku/mdmm
+mdmm init
 ```
 
 ```bash
-npx mdmm init
+npx @bnku/mdm init
 ```
 
 После `init` у вас появится базовая структура проекта, пример общей диаграммы и стартовый документ.
@@ -56,24 +57,26 @@ npx mdmm init
 
 | Сценарий | Команда | Когда подходит |
 | --- | --- | --- |
-| Без установки | `npx mdmm@latest ...` | если нужно быстро попробовать инструмент или выполнить разовую сборку |
-| Глобальная установка | `npm i -g mdmm` | если вы часто работаете с документацией на этой машине |
+| Глобальная установка | `npm i -g @bnku/mdmm` | если вы часто работаете с документацией на этой машине |
+| Без установки | `npx @bnku/mdmm ...` | если нужно быстро попробовать инструмент или выполнить разовую сборку |
 
 
 Примеры:
 
 ```bash
-npx mdmm@latest --help
-npx mdmm@latest init
-npx mdmm@latest build
-```
-
-```bash
-npm i -g mdmm
+npm i -g @bnku/mdmm
 mdmm --help
 mdmm check
 mdmm build
 ```
+
+```bash
+npx @bnku/mdmm --help
+npx @bnku/mdmm init
+npx @bnku/mdmm build
+```
+
+На npm пакет публикуется как `@bnku/mdmm`, но после установки команда в терминале по-прежнему называется `mdmm`.
 
 ## Новый Проект
 

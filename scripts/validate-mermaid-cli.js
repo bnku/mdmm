@@ -21,6 +21,7 @@ async function main() {
   const workspace = await mkdtemp(path.join(tmpdir(), "mermaid-validate-"));
 
   try {
+    const puppeteerConfigPath = process.env.CI ? await writeCiPuppeteerConfig(workspace) : null;
     let diagramCount = 0;
 
     for (const file of files) {
@@ -36,11 +37,13 @@ async function main() {
         const outputPath = path.join(workspace, `diagram-${diagramCount}.svg`);
         await writeFile(inputPath, `${match[1].trim()}\n`, "utf8");
 
-        await execFileAsync(
-          "npx",
-          ["--yes", "@mermaid-js/mermaid-cli", "-i", inputPath, "-o", outputPath],
-          { cwd: workspace, timeout: 240000 },
-        );
+        const commandArgs = ["--yes", "@mermaid-js/mermaid-cli", "-i", inputPath, "-o", outputPath];
+
+        if (puppeteerConfigPath) {
+          commandArgs.push("-p", puppeteerConfigPath);
+        }
+
+        await execFileAsync("npx", commandArgs, { cwd: workspace, timeout: 240000 });
       }
 
       process.stdout.write(`Validated ${blockIndex} Mermaid block(s) in ${path.relative(process.cwd(), absolutePath)}\n`);
@@ -50,6 +53,17 @@ async function main() {
   } finally {
     await rm(workspace, { recursive: true, force: true });
   }
+}
+
+async function writeCiPuppeteerConfig(workspace) {
+  const configPath = path.join(workspace, "puppeteer-config.json");
+  const config = {
+    args: ["--no-sandbox"],
+  };
+
+  await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
+
+  return configPath;
 }
 
 main().catch((error) => {

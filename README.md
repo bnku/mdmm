@@ -37,11 +37,12 @@ This makes documentation easier to maintain: repeated diagrams do not need to be
 ## Quick Start
 
 ```bash
-npx mdmm
+npm i -g @bnku/mdmm
+mdmm init
 ```
 
 ```bash
-npx mdmm init
+npx @bnku/mdmm init
 ```
 
 After `init`, you get a basic project structure, a sample shared diagram, and a starter document.
@@ -60,23 +61,25 @@ Requirement: `Node.js 22` or newer.
 
 | Scenario | Command | When it fits |
 | --- | --- | --- |
-| No installation | `npx mdmm@latest ...` | when you want to try the tool quickly or run a one-off build |
-| Global install | `npm i -g mdmm` | when you work with documentation on this machine regularly |
+| Global install | `npm i -g @bnku/mdmm` | when you work with documentation on this machine regularly |
+| No installation | `npx @bnku/mdmm ...` | when you want to try the tool quickly or run a one-off build |
 
 Examples:
 
 ```bash
-npx mdmm@latest --help
-npx mdmm@latest init
-npx mdmm@latest build
-```
-
-```bash
-npm i -g mdmm
+npm i -g @bnku/mdmm
 mdmm --help
 mdmm check
 mdmm build
 ```
+
+```bash
+npx @bnku/mdmm --help
+npx @bnku/mdmm init
+npx @bnku/mdmm build
+```
+
+The package is published on npm as `@bnku/mdmm`, but the installed CLI command remains `mdmm`.
 
 ## New Project
 
