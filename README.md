@@ -52,8 +52,9 @@ After `init`, you get a basic project structure, a sample shared diagram, and a 
 1. Store shared Mermaid blocks in a library.
 2. Include them from working documents through `mdmm` directives.
 3. Run `mdmm check` to validate references, template arguments, and language rules.
-4. Run `mdmm build` to expand all includes and produce final Markdown.
-5. The output contains plain `mermaid` blocks ready for publication.
+4. Use `mdmm dev` during authoring when you want watch mode with selective rebuilds.
+5. Run `mdmm build` to expand all includes and produce final Markdown.
+6. The output contains plain `mermaid` blocks ready for publication.
 
 ## Installation And Usage
 
@@ -70,6 +71,7 @@ Examples:
 npm i -g @bnku/mdmm
 mdmm --help
 mdmm check
+mdmm dev
 mdmm build
 ```
 
@@ -81,7 +83,7 @@ npx @bnku/mdmm build
 
 The package is published on npm as `@bnku/mdmm`, but the installed CLI command remains `mdmm`.
 
-This project also ships with an agent skill in `.agents/mdmm` that documentation authors can install into their own agent setup, either globally or inside a docs project. It helps the agent work with `mdmm` more reliably by understanding the expected project layout, the reusable block and fragment syntax, when to use `check`, `build`, or `report`, and how to diagnose broken references, template arguments, and include-related issues while collaborating on documentation changes.
+This project also ships with an agent skill in `.agents/mdmm` that documentation authors can install into their own agent setup, either globally or inside a docs project. It helps the agent work with `mdmm` more reliably by understanding the expected project layout, the reusable block and fragment syntax, when to use `check`, `dev`, `build`, or `report`, and how to diagnose broken references, template arguments, and include-related issues while collaborating on documentation changes.
 
 ## New Project
 
@@ -155,8 +157,9 @@ A typical workflow looks like this:
 2. Write user-facing documents in `docs/`.
 3. Include the blocks you need through `mdmm` directives.
 4. Run `mdmm check` for a fast validation of references and templates.
-5. Run `mdmm build` to generate final Markdown for publication.
-6. Use `mdmm report` when you need to see what is reused and where.
+5. Use `mdmm dev` while authoring when you want automatic selective rebuilds into `dist/`.
+6. Run `mdmm build` to generate final Markdown for publication.
+7. Use `mdmm report` when you need to see what is reused and where.
 
 ## The MDMM Authoring Language
 
@@ -407,6 +410,7 @@ Every command also has its own help:
 ```bash
 mdmm build --help
 mdmm check --help
+mdmm dev --help
 ```
 
 ### Global Options
@@ -483,6 +487,52 @@ mdmm check
 mdmm check ./docs
 mdmm check ./docs/customer-flow.md
 mdmm check ./docs --max-include-depth 8
+```
+
+## Command `dev`
+
+Syntax:
+
+```bash
+mdmm dev [<input-dir>] [--output <output-path>] [--max-include-depth <n>] [--no-validate]
+```
+
+When to use it:
+
+- when you are actively editing docs or shared Mermaid blocks;
+- when you want `dist/` to stay up to date without rerunning `build` by hand;
+- when full project rebuilds would be unnecessarily expensive after a small change.
+
+What `dev` does:
+
+- performs an initial directory build;
+- watches source docs, the shared library, and project config;
+- rebuilds only the affected Markdown documents when dependencies change;
+- keeps the last successful output if an updated batch fails;
+- keeps watching after errors so the next fix can rebuild automatically.
+
+### Parameters For `dev`
+
+| Parameter | Default | What it does |
+| --- | --- | --- |
+| `<input-dir>` | `docsDir` from config or `./docs` | sets the directory to watch and rebuild |
+| `--output <output-path>` | `outputDir` from config or `./dist` | sets where rebuilt Markdown files are written |
+| `--max-include-depth <n>` | `5` | limits nested include depth |
+| `--no-validate` | off | disables final Mermaid validation during watch rebuilds |
+
+### Important `dev` Properties
+
+- `dev` currently watches a directory input only;
+- it uses dependency tracking to avoid rebuilding unrelated docs;
+- adding or removing shared blocks can still trigger rebuilds for short-reference users;
+- if a rebuild fails, the previous successful file contents stay on disk.
+
+Examples:
+
+```bash
+mdmm dev
+mdmm dev ./docs --output ./dist/docs
+mdmm dev ./docs --no-validate
 ```
 
 ## Command `build`
@@ -607,6 +657,10 @@ It is intended for a future workflow where an existing documentation set needs r
 | `init` | starter files | created |
 | `check` | input path | `docsDir` from config or `./docs` |
 | `check` | `--max-include-depth` | `5` |
+| `dev` | input path | `docsDir` from config or `./docs` |
+| `dev` | output without `--output` | `outputDir` from config or `./dist` |
+| `dev` | `--max-include-depth` | `5` |
+| `dev` | Mermaid validation | enabled |
 | `build` | input path | `docsDir` from config or `./docs` |
 | `build` | `--max-include-depth` | `5` |
 | `build` | Mermaid validation | enabled |
@@ -627,6 +681,7 @@ It is intended for a future workflow where an existing documentation set needs r
 - template arguments are not meant for node ids, `alias`, or the diagram type line;
 - nesting depth is limited by `--max-include-depth`;
 - `check` can succeed while `build` fails if the final Mermaid output is invalid;
+- `dev` currently supports only directory input, not single-file watch mode;
 - `adopt` does not yet perform a real migration.
 
 ## FAQ
@@ -637,7 +692,7 @@ No. The tool can work without a config file. But for regular project work, the c
 
 **Can I run `mdmm` on a single file?**
 
-Yes. `check`, `build`, and `report` accept either a single `.md` file or a directory.
+`check`, `build`, and `report` accept either a single `.md` file or a directory. `dev` currently watches a directory only.
 
 **Where does `mdmm` look for short references?**
 

@@ -1461,6 +1461,7 @@ test("cli help prints usage", async () => {
 
   assert.match(stdout, /Usage:/);
   assert.match(stdout, /mdmm build/);
+  assert.match(stdout, /mdmm dev/);
   assert.match(stdout, /mdmm init/);
 });
 

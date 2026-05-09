@@ -16,27 +16,41 @@ const FRAGMENT_INCLUDE_SENTINEL = /(^|\n)\s*%%\s*include:/m;
 export { MermaidIncludeError } from "./errors.js";
 
 export async function preprocessMarkdown(markdown, options) {
+  const result = await processMarkdown(markdown, options);
+  return result.output;
+}
+
+export async function buildDocumentArtifacts(inputPath, options = {}) {
+  const absoluteInputPath = path.resolve(inputPath);
+  const markdown = await readUtf8(absoluteInputPath);
+  return processMarkdown(markdown, {
+    ...options,
+    inputPath: absoluteInputPath,
+  });
+}
+
+async function processMarkdown(markdown, options) {
   const inputPath = path.resolve(options.inputPath);
   const projectSettings = options.projectSettings ?? (await loadProjectSettings(inputPath, { cwd: options.cwd }));
   const context = {
+    entryFilePath: inputPath,
     maxIncludeDepth: options.maxIncludeDepth ?? 5,
     fileCache: new Map(),
     projectSettings,
     sharedBlockIndexPromise: null,
+    dependencyEvents: [],
   };
 
   const output = await resolveMarkdown(markdown, inputPath, context, []);
   assertNoUnresolvedDirectives(output, inputPath);
-  return output;
+  return {
+    output,
+    dependencies: context.dependencyEvents,
+  };
 }
 
 export async function preprocessFile(inputPath, outputPath, options = {}) {
-  const absoluteInputPath = path.resolve(inputPath);
-  const markdown = await readUtf8(absoluteInputPath);
-  const output = await preprocessMarkdown(markdown, {
-    ...options,
-    inputPath: absoluteInputPath,
-  });
+  const { output } = await buildDocumentArtifacts(inputPath, options);
 
   if (outputPath) {
     const absoluteOutputPath = path.resolve(outputPath);
@@ -60,6 +74,7 @@ async function resolveMarkdown(markdown, currentFilePath, context, stack) {
 }
 
 async function resolveDiagramBlockReference(reference, context, stack) {
+  recordDependencyEvent(reference, context, stack, "diagram");
   const block = await getBlock(reference, context, "diagram");
   const invocationKey = getInvocationCacheKey(reference.args ?? {});
 
@@ -77,6 +92,7 @@ async function resolveDiagramBlockReference(reference, context, stack) {
 }
 
 async function resolveFragmentBlockReference(reference, context, stack) {
+  recordDependencyEvent(reference, context, stack, "fragment");
   const block = await getBlock(reference, context, "fragment");
   const invocationKey = getInvocationCacheKey(reference.args ?? {});
 
@@ -405,6 +421,20 @@ function assertNoUnresolvedDirectives(markdown, filePath, blockId) {
       code: "UNRESOLVED_FRAGMENT_INCLUDE",
     });
   }
+}
+
+function recordDependencyEvent(reference, context, stack, type) {
+  context.dependencyEvents.push({
+    type,
+    reference: reference.referenceText,
+    referenceKind: reference.referenceKind ?? "explicit",
+    shortBlockId: reference.shortBlockId ?? null,
+    resolvedFilePath: reference.filePath,
+    blockId: reference.blockId,
+    sourceFilePath: reference.invocationFilePath ?? context.entryFilePath,
+    sourceBlockKey: stack.at(-1) ?? null,
+    args: normalizeTemplateArgs(reference.args ?? {}),
+  });
 }
 
 async function readUtf8(filePath) {

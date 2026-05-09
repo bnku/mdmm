@@ -1,9 +1,10 @@
-import { readFile, readdir, stat } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
 import { extractBlocks } from "./blocks.js";
 import { MermaidIncludeError } from "./errors.js";
+import { listMarkdownFiles } from "./files.js";
 import { parseDiagramIncludeDirective } from "./include-parser.js";
 
 export async function resolveBlockReference(rawReference, currentFilePath, sourceName, context) {
@@ -57,6 +58,8 @@ async function resolveShortReference(blockId, currentFilePath, context) {
     filePath: matches[0].filePath,
     blockId,
     referenceText: blockId,
+    referenceKind: "short",
+    shortBlockId: blockId,
   };
 }
 
@@ -73,6 +76,8 @@ function parseExplicitReference(referenceText, currentFilePath, sourceName) {
     filePath: path.resolve(path.dirname(currentFilePath), filePart),
     blockId,
     referenceText,
+    referenceKind: "explicit",
+    shortBlockId: null,
   };
 }
 
@@ -94,7 +99,7 @@ async function loadSharedBlockIndex(context) {
 }
 
 async function buildSharedBlockIndex(sharedDir) {
-  const markdownFiles = await listMarkdownFiles(sharedDir);
+  const markdownFiles = await listMarkdownFiles(sharedDir, { allowMissing: true });
   const index = new Map();
 
   for (const filePath of markdownFiles) {
@@ -111,37 +116,4 @@ async function buildSharedBlockIndex(sharedDir) {
   }
 
   return index;
-}
-
-async function listMarkdownFiles(rootDir) {
-  try {
-    const rootStats = await stat(rootDir);
-    if (!rootStats.isDirectory()) {
-      return [];
-    }
-  } catch (error) {
-    if (error && error.code === "ENOENT") {
-      return [];
-    }
-
-    throw error;
-  }
-
-  const entries = await readdir(rootDir, { withFileTypes: true });
-  const files = [];
-
-  for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
-    const entryPath = path.join(rootDir, entry.name);
-
-    if (entry.isDirectory()) {
-      files.push(...(await listMarkdownFiles(entryPath)));
-      continue;
-    }
-
-    if (entry.isFile() && entry.name.endsWith(".md")) {
-      files.push(entryPath);
-    }
-  }
-
-  return files;
 }

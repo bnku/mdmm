@@ -1,13 +1,14 @@
 #!/usr/bin/env node
-import { mkdir, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import packageJson from "../package.json" with { type: "json" };
 import { pathToFileURL } from "node:url";
 
+import { startDevSession } from "./dev.js";
 import { MermaidIncludeError } from "./errors.js";
+import { getIgnoredDirs, listMarkdownFiles, statInputPath, writeTextFile } from "./files.js";
 import { createLogger } from "./logger.js";
-import { isSameOrNestedPath, loadProjectSettings } from "./project.js";
+import { loadProjectSettings } from "./project.js";
 import { preprocessFile } from "./preprocess.js";
 import { buildDependencyReport } from "./report.js";
 import { initializeProject } from "./scaffold.js";
@@ -18,6 +19,11 @@ const COMMANDS = {
     summary: "Resolve includes, validate Mermaid, and write Markdown output",
     usage: "mdmm build [<input.md|input-dir>] [--output <output-path>] [--max-include-depth <n>] [--no-validate]",
     handler: handleBuildCommand,
+  },
+  dev: {
+    summary: "Watch docs and selectively rebuild affected Markdown output",
+    usage: "mdmm dev [<input-dir>] [--output <output-path>] [--max-include-depth <n>] [--no-validate]",
+    handler: handleDevCommand,
   },
   check: {
     summary: "Resolve include directives without writing files",
@@ -144,6 +150,37 @@ async function handleCheckCommand(argv, context) {
     cwd: context.cwd,
   });
   context.logger.success(`OK ${path.relative(context.cwd, inputPath)}`);
+}
+
+async function handleDevCommand(argv, context) {
+  if (hasCommandHelpFlag(argv)) {
+    printCommandHelp(context.logger, "dev");
+    return;
+  }
+
+  const parsed = parsePathCommandArgs(argv, {
+    allowOutput: true,
+    allowValidateToggle: true,
+  });
+  const session = await startDevSession({
+    cwd: context.cwd,
+    logger: context.logger,
+    inputPath: parsed.inputPath,
+    outputPath: parsed.outputPath,
+    maxIncludeDepth: parsed.maxIncludeDepth,
+    validate: parsed.validate,
+  });
+  const closeSession = () => session.close();
+
+  process.once("SIGINT", closeSession);
+  process.once("SIGTERM", closeSession);
+
+  try {
+    await session.done;
+  } finally {
+    process.off("SIGINT", closeSession);
+    process.off("SIGTERM", closeSession);
+  }
 }
 
 async function handleReportCommandEntry(argv, context) {
@@ -400,56 +437,6 @@ function parseInitArgs(argv) {
   return parsed;
 }
 
-async function listMarkdownFiles(rootDir, options = {}) {
-  const ignoredDirs = options.ignoredDirs ?? [];
-  const entries = await readdir(rootDir, { withFileTypes: true });
-  const files = [];
-
-  for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
-    const entryPath = path.join(rootDir, entry.name);
-
-    if (entry.isDirectory()) {
-      if (ignoredDirs.some((ignoredDir) => isSameOrNestedPath(ignoredDir, entryPath))) {
-        continue;
-      }
-
-      files.push(...(await listMarkdownFiles(entryPath, options)));
-      continue;
-    }
-
-    if (entry.isFile() && entry.name.endsWith(".md")) {
-      files.push(entryPath);
-    }
-  }
-
-  return files;
-}
-
-function getIgnoredDirs(inputPath, projectSettings) {
-  return [projectSettings.sharedDir, projectSettings.outputDir].filter(
-    (dirPath) => dirPath !== inputPath && isSameOrNestedPath(inputPath, dirPath),
-  );
-}
-
-async function statInputPath(inputPath, cwd) {
-  try {
-    return await stat(inputPath);
-  } catch (error) {
-    if (error && error.code === "ENOENT") {
-      throw new MermaidIncludeError(`Input path not found: ${path.relative(cwd, inputPath)}`, {
-        code: "MISSING_INPUT",
-      });
-    }
-
-    throw error;
-  }
-}
-
-async function writeTextFile(outputPath, content) {
-  await mkdir(path.dirname(outputPath), { recursive: true });
-  await writeFile(outputPath, content, "utf8");
-}
-
 function printGeneralHelp(logger) {
   logger.write(
     [
@@ -472,6 +459,7 @@ function printGeneralHelp(logger) {
       "Command model:",
       "  init   scaffold a new docs project",
       "  check  fast structural mdmm validation",
+      "  dev    watch docs and selectively rebuild affected output",
       "  build  publish-oriented build with Mermaid validation by default",
       "  adopt  planned future flow for retrofitting an existing docs project",
     ].join("\n") + "\n",
@@ -492,6 +480,24 @@ function printCommandHelp(logger, command) {
         "  mdmm build",
         "  mdmm build ./docs --output ./dist/docs",
         "  mdmm build ./docs --no-validate",
+      ].join("\n") + "\n",
+    );
+    return;
+  }
+
+  if (command === "dev") {
+    logger.write(
+      [
+        "Usage:",
+        `  ${COMMANDS.dev.usage}`,
+        "",
+        "What it does:",
+        "  Watches docs and shared Mermaid files, then selectively rebuilds only affected Markdown output.",
+        "",
+        "Examples:",
+        "  mdmm dev",
+        "  mdmm dev ./docs --output ./dist/docs",
+        "  mdmm dev ./docs --no-validate",
       ].join("\n") + "\n",
     );
     return;
