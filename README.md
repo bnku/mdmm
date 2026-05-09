@@ -81,6 +81,8 @@ npx @bnku/mdmm build
 
 The package is published on npm as `@bnku/mdmm`, but the installed CLI command remains `mdmm`.
 
+This project also ships with an agent skill in `.agents/mdmm` that documentation authors can install into their own agent setup, either globally or inside a docs project. It helps the agent work with `mdmm` more reliably by understanding the expected project layout, the reusable block and fragment syntax, when to use `check`, `build`, or `report`, and how to diagnose broken references, template arguments, and include-related issues while collaborating on documentation changes.
+
 ## New Project
 
 The `mdmm init` command creates a new documentation project structure.
