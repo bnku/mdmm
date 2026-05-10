@@ -1,6 +1,6 @@
 {
   "name": "@bnku/mdmm",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "MDMM CLI for reusable Mermaid includes in Markdown documentation",
   "license": "MIT",
   "type": "module",

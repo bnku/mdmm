@@ -12,7 +12,7 @@ import packageJson from "../package.json" with { type: "json" };
 import { createLogger } from "../src/logger.js";
 import { loadProjectSettings } from "../src/project.js";
 import { MermaidIncludeError, preprocessFile } from "../src/preprocess.js";
-import { collectFileDependencies, buildDependencyReport } from "../src/report.js";
+import { collectFileDependencies, buildDependencyReport, formatDependencyReport } from "../src/report.js";
 import { resolveBlockReference, resolveReferenceText } from "../src/references.js";
 
 const execFileAsync = promisify(execFile);
@@ -1594,9 +1594,203 @@ kyc__done --> Done
   assert.deepEqual(report.files[0].dependencies[1].args, {
     owner: "Sales Ops",
   });
-  assert.deepEqual(report.blocks[0].usedBy[0].args, {
+  const fragmentBlock = report.blocks.find((block) => block.type === "fragment");
+  assert.ok(fragmentBlock);
+  assert.deepEqual(fragmentBlock.usedBy[0].args, {
     owner: "Sales Ops",
   });
+});
+
+test("report command keeps block identities separate by type", async () => {
+  const rootDir = await createWorkspace();
+
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/markdown-library.md",
+    `<!-- markdown:block customer.overview -->
+Shared Markdown overview.
+<!-- /markdown:block -->
+`,
+  );
+
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/diagram-library.md",
+    `<!-- mermaid:block customer.overview -->
+\`\`\`mermaid
+flowchart TD
+Start --> Done
+\`\`\`
+<!-- /mermaid:block -->
+`,
+  );
+
+  const inputPath = await writeWorkspaceFile(
+    rootDir,
+    "docs/journey.md",
+    `\`\`\`markdown-include
+customer.overview
+\`\`\`
+
+\`\`\`mermaid-include
+customer.overview
+\`\`\`
+`,
+  );
+
+  const { stdout } = await execFileAsync(process.execPath, [cliPath, "report", inputPath], {
+    cwd: rootDir,
+  });
+
+  const report = JSON.parse(stdout);
+  assert.equal(report.summary.blockCount, 2);
+  assert.deepEqual(
+    report.blocks.map((block) => block.type).sort(),
+    ["diagram", "markdown"],
+  );
+  assert.deepEqual(
+    report.blocks.map((block) => `${block.type}:${block.target}#${block.blockId}`).sort(),
+    [
+      "diagram:shared/diagram-library.md#customer.overview",
+      "markdown:shared/markdown-library.md#customer.overview",
+    ],
+  );
+});
+
+test("report command supports Markdown output", async () => {
+  const rootDir = await createWorkspace();
+
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/library.md",
+    `<!-- markdown:block customer.section -->
+Shared Markdown section.
+<!-- /markdown:block -->
+
+<!-- mermaid:block customer.overview -->
+\`\`\`mermaid
+flowchart TD
+Start --> Done
+\`\`\`
+<!-- /mermaid:block -->
+
+<!-- mermaid:fragment customer.fragment exports=entry,done -->
+\`\`\`mermaid
+flowchart TD
+entry[Start]
+entry --> done[Done]
+\`\`\`
+<!-- /mermaid:fragment -->
+`,
+  );
+
+  const inputPath = await writeWorkspaceFile(
+    rootDir,
+    "docs/journey.md",
+    `\`\`\`markdown-include
+customer.section
+\`\`\`
+
+\`\`\`mermaid-include
+customer.overview
+\`\`\`
+
+\`\`\`mermaid
+flowchart LR
+Start --> kyc__entry
+%% include: customer.fragment as kyc
+kyc__done --> Finish
+\`\`\`
+`,
+  );
+
+  const { stdout } = await execFileAsync(process.execPath, [cliPath, "report", inputPath, "--format", "markdown"], {
+    cwd: rootDir,
+  });
+
+  assert.match(stdout, /# mdmm Dependency Report/);
+  assert.match(stdout, /\| Processed files \| 1 \|/);
+  assert.match(stdout, /\| Markdown dependencies \| 1 \|/);
+  assert.match(stdout, /\| Diagram dependencies \| 1 \|/);
+  assert.match(stdout, /\| Fragment dependencies \| 1 \|/);
+  assert.match(stdout, /## Hotspots/);
+  assert.match(stdout, /### Markdown Blocks/);
+  assert.match(stdout, /### Diagram Blocks/);
+  assert.match(stdout, /### Fragment Blocks/);
+  assert.match(stdout, /#### `shared\/library\.md#customer\.section`/);
+  assert.match(stdout, /#### `shared\/library\.md#customer\.overview`/);
+  assert.match(stdout, /#### `shared\/library\.md#customer\.fragment`/);
+  assert.match(stdout, /## File Dependency Index/);
+  assert.match(stdout, /### `docs\/journey\.md`/);
+  assert.match(stdout, /Short references are resolved within their block type inside `sharedDir`\./);
+});
+
+test("formatDependencyReport renders Markdown from the canonical report object", async () => {
+  const report = {
+    generatedAt: "2026-05-10T00:00:00.000Z",
+    rootPath: "docs",
+    summary: {
+      fileCount: 1,
+      dependencyCount: 1,
+      blockCount: 1,
+    },
+    files: [
+      {
+        path: "docs/journey.md",
+        dependencyCount: 1,
+        dependencies: [
+          {
+            type: "diagram",
+            reference: "customer.overview",
+            target: "shared/library.md",
+            blockId: "customer.overview",
+            alias: null,
+            args: {},
+          },
+        ],
+      },
+    ],
+    blocks: [
+      {
+        type: "diagram",
+        target: "shared/library.md",
+        blockId: "customer.overview",
+        useCount: 1,
+        usedBy: [
+          {
+            path: "docs/journey.md",
+            type: "diagram",
+            alias: null,
+            reference: "customer.overview",
+            args: {},
+          },
+        ],
+      },
+    ],
+  };
+
+  const output = formatDependencyReport(report, "markdown");
+  assert.match(output, /# mdmm Dependency Report/);
+  assert.match(output, /## Block Usage Index/);
+  assert.match(output, /## File Dependency Index/);
+});
+
+test("report command rejects an unsupported format", async () => {
+  const rootDir = await createWorkspace();
+
+  const inputPath = await writeWorkspaceFile(
+    rootDir,
+    "docs/journey.md",
+    "# Journey\n",
+  );
+
+  await assert.rejects(
+    () => execFileAsync(process.execPath, [cliPath, "report", inputPath, "--format", "html"], { cwd: rootDir }),
+    (error) => {
+      assert.match(error.stderr, /--format must be one of: json, markdown/);
+      return true;
+    },
+  );
 });
 
 test("report command ignores shared and output directories when run from project root", async () => {
@@ -1671,7 +1865,7 @@ ignored.block
   assert.equal(report.summary.fileCount, 2);
   assert.equal(report.summary.dependencyCount, 2);
   assert.equal(report.blocks.length, 2);
-  assert.equal(report.blocks[0].usedBy.length, 1);
+  assert.ok(report.blocks.every((block) => block.usedBy.length === 1));
   assert.ok(report.files.every((file) => !file.path.endsWith("skip.md")));
 });
 

@@ -10,7 +10,7 @@ import { getIgnoredDirs, listMarkdownFiles, statInputPath, writeTextFile } from 
 import { createLogger } from "./logger.js";
 import { loadProjectSettings } from "./project.js";
 import { preprocessFile } from "./preprocess.js";
-import { buildDependencyReport } from "./report.js";
+import { buildDependencyReport, formatDependencyReport } from "./report.js";
 import { initializeProject } from "./scaffold.js";
 import { validateMarkdownMermaid } from "./validator.js";
 
@@ -31,8 +31,8 @@ const COMMANDS = {
     handler: handleCheckCommand,
   },
   report: {
-    summary: "Build a JSON dependency report for include usage",
-    usage: "mdmm report [<input.md|input-dir>] [--output <report.json>]",
+    summary: "Build a dependency report for include usage",
+    usage: "mdmm report [<input.md|input-dir>] [--output <report-path>] [--format <json|markdown>]",
     handler: handleReportCommandEntry,
   },
   init: {
@@ -193,6 +193,7 @@ async function handleReportCommandEntry(argv, context) {
     allowOutput: true,
     allowValidateToggle: false,
     allowMaxIncludeDepth: false,
+    allowFormat: true,
   });
   const projectSettings = await loadProjectSettings(parsed.inputPath ?? context.cwd, { cwd: context.cwd });
   const inputPath = path.resolve(parsed.inputPath ?? projectSettings.docsDir);
@@ -257,7 +258,7 @@ async function handleReportCommand(inputPath, inputStats, parsed, projectSetting
     projectSettings,
   });
 
-  const output = `${JSON.stringify(report, null, 2)}\n`;
+  const output = formatDependencyReport(report, parsed.format);
 
   if (!parsed.outputPath) {
     context.logger.write(output);
@@ -322,11 +323,13 @@ function parsePathCommandArgs(argv, options = {}) {
   const allowOutput = options.allowOutput ?? false;
   const allowValidateToggle = options.allowValidateToggle ?? false;
   const allowMaxIncludeDepth = options.allowMaxIncludeDepth ?? true;
+  const allowFormat = options.allowFormat ?? false;
   const parsed = {
     inputPath: null,
     outputPath: null,
     maxIncludeDepth: 5,
     validate: true,
+    format: "json",
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -366,6 +369,31 @@ function parsePathCommandArgs(argv, options = {}) {
       }
 
       parsed.maxIncludeDepth = Number.parseInt(rawDepth, 10);
+      index += 1;
+      continue;
+    }
+
+    if (value === "--format") {
+      if (!allowFormat) {
+        throw new MermaidIncludeError(`Unexpected argument: ${value}`, {
+          code: "UNEXPECTED_ARGUMENT",
+        });
+      }
+
+      const format = argv[index + 1];
+      if (!format || format.startsWith("--")) {
+        throw new MermaidIncludeError("--format requires a value", {
+          code: "MISSING_OPTION_VALUE",
+        });
+      }
+
+      if (format !== "json" && format !== "markdown") {
+        throw new MermaidIncludeError("--format must be one of: json, markdown", {
+          code: "INVALID_REPORT_FORMAT",
+        });
+      }
+
+      parsed.format = format;
       index += 1;
       continue;
     }
@@ -461,6 +489,7 @@ function printGeneralHelp(logger) {
       "  check  fast structural mdmm validation",
       "  dev    watch docs and selectively rebuild affected output",
       "  build  publish-oriented build with Mermaid validation by default",
+      "  report analyze include usage as JSON or Markdown",
       "  adopt  planned future flow for retrofitting an existing docs project",
     ].join("\n") + "\n",
   );
@@ -527,11 +556,12 @@ function printCommandHelp(logger, command) {
         `  ${COMMANDS.report.usage}`,
         "",
         "What it does:",
-        "  Builds a JSON usage map for Markdown, diagram, and fragment dependencies.",
+        "  Builds a JSON or Markdown usage map for Markdown, diagram, and fragment dependencies.",
         "",
         "Examples:",
         "  mdmm report",
         "  mdmm report ./docs --output ./dist/dependencies.json",
+        "  mdmm report ./docs --format markdown --output ./dist/dependencies.md",
       ].join("\n") + "\n",
     );
     return;

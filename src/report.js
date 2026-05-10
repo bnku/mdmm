@@ -10,6 +10,13 @@ import { normalizeTemplateArgs } from "./templates.js";
 const DIAGRAM_INCLUDE_PATTERN = /```(?:mermaid|mm)-include[^\n]*\r?\n([\s\S]*?)\r?\n```/g;
 const MARKDOWN_INCLUDE_PATTERN = /```(?:markdown|md)-include[^\n]*\r?\n([\s\S]*?)\r?\n```/g;
 const MERMAID_FENCE_PATTERN = /```mermaid(?!-)([^\n]*)\r?\n([\s\S]*?)\r?\n```/g;
+const REPORT_TYPE_ORDER = ["markdown", "diagram", "fragment"];
+const TYPE_LABELS = {
+  markdown: "Markdown",
+  diagram: "Diagram",
+  fragment: "Fragment",
+};
+const HOTSPOT_LIMIT = 10;
 
 export async function buildDependencyReport(filePaths, options = {}) {
   const cwd = options.cwd ?? process.cwd();
@@ -33,9 +40,10 @@ export async function buildDependencyReport(filePaths, options = {}) {
     });
 
     for (const dependency of dependencies) {
-      const blockKey = `${dependency.resolvedFilePath}#${dependency.blockId}`;
+      const blockKey = `${dependency.type}:${dependency.resolvedFilePath}#${dependency.blockId}`;
       if (!blockUsage.has(blockKey)) {
         blockUsage.set(blockKey, {
+          type: dependency.type,
           target: path.relative(cwd, dependency.resolvedFilePath),
           blockId: dependency.blockId,
           usedBy: [],
@@ -54,14 +62,15 @@ export async function buildDependencyReport(filePaths, options = {}) {
 
   const blocks = [...blockUsage.values()]
     .map((entry) => ({
+      type: entry.type,
       target: entry.target,
       blockId: entry.blockId,
       useCount: entry.usedBy.length,
       usedBy: entry.usedBy.sort(comparePathEntries),
     }))
     .sort((left, right) => {
-      const leftKey = `${left.target}#${left.blockId}`;
-      const rightKey = `${right.target}#${right.blockId}`;
+      const leftKey = `${sortTypeIndex(left.type)}:${left.target}#${left.blockId}`;
+      const rightKey = `${sortTypeIndex(right.type)}:${right.target}#${right.blockId}`;
       return leftKey.localeCompare(rightKey);
     });
 
@@ -76,6 +85,20 @@ export async function buildDependencyReport(filePaths, options = {}) {
     files,
     blocks,
   };
+}
+
+export function formatDependencyReport(report, format = "json") {
+  if (format === "json") {
+    return `${JSON.stringify(report, null, 2)}\n`;
+  }
+
+  if (format === "markdown") {
+    return renderDependencyReportMarkdown(report);
+  }
+
+  throw new MermaidIncludeError(`Unsupported report format: ${format}`, {
+    code: "INVALID_REPORT_FORMAT",
+  });
 }
 
 export async function collectFileDependencies(markdown, currentFilePath, context) {
@@ -141,6 +164,147 @@ function formatDependency(dependency, cwd) {
     args: dependency.args,
   };
 }
+
+function renderDependencyReportMarkdown(report) {
+  const dependencyTypeCounts = countDependencyTypes(report.files);
+  const blockHotspots = [...report.blocks]
+    .sort(compareBlockHotspots)
+    .slice(0, HOTSPOT_LIMIT);
+  const fileHotspots = [...report.files]
+    .sort(compareFileHotspots)
+    .slice(0, HOTSPOT_LIMIT);
+  const scope = report.rootPath || ".";
+  const lines = [
+    "# mdmm Dependency Report",
+    "",
+    `Scope: ${formatInlineCode(scope)}`,
+    `Generated: ${formatInlineCode(report.generatedAt)}`,
+    "View: `direct dependencies only`",
+    "",
+    "## Summary",
+    "",
+    "| Metric | Value |",
+    "| --- | ---: |",
+    `| Processed files | ${report.summary.fileCount} |`,
+    `| Direct dependencies | ${report.summary.dependencyCount} |`,
+    `| Unique referenced blocks | ${report.summary.blockCount} |`,
+    `| Markdown dependencies | ${dependencyTypeCounts.markdown} |`,
+    `| Diagram dependencies | ${dependencyTypeCounts.diagram} |`,
+    `| Fragment dependencies | ${dependencyTypeCounts.fragment} |`,
+    "",
+    "## Hotspots",
+    "",
+    "### Most Reused Blocks",
+    "",
+  ];
+
+  if (blockHotspots.length === 0) {
+    lines.push("No shared blocks are referenced.", "");
+  } else {
+    lines.push(
+      "| Type | Block | Uses | Consumer files |",
+      "| --- | --- | ---: | ---: |",
+      ...blockHotspots.map((block) => {
+        const consumerFileCount = countUniquePaths(block.usedBy);
+        return `| ${formatInlineCode(block.type)} | ${formatInlineCode(`${block.target}#${block.blockId}`)} | ${block.useCount} | ${consumerFileCount} |`;
+      }),
+      "",
+    );
+  }
+
+  lines.push("### Files With Most Dependencies", "");
+
+  if (fileHotspots.length === 0) {
+    lines.push("No Markdown files were processed.", "");
+  } else {
+    lines.push(
+      "| File | Dependencies | Type mix |",
+      "| --- | ---: | --- |",
+      ...fileHotspots.map(
+        (file) => `| ${formatInlineCode(file.path)} | ${file.dependencyCount} | ${formatInlineCode(formatTypeMix(file.dependencies))} |`,
+      ),
+      "",
+    );
+  }
+
+  lines.push("## Block Usage Index", "");
+
+  if (report.blocks.length === 0) {
+    lines.push("No shared blocks are referenced.", "");
+  } else {
+    for (const type of REPORT_TYPE_ORDER) {
+      const blocks = report.blocks.filter((block) => block.type === type);
+
+      lines.push(`### ${TYPE_LABELS[type]} Blocks`, "");
+
+      if (blocks.length === 0) {
+        lines.push(`No ${type} block dependencies found.`, "");
+        continue;
+      }
+
+      for (const block of blocks) {
+        const consumerFileCount = countUniquePaths(block.usedBy);
+
+        lines.push(
+          `#### ${formatInlineCode(`${block.target}#${block.blockId}`)}`,
+          `Type: ${formatInlineCode(block.type)}`,
+          `Uses: ${formatInlineCode(block.useCount)}`,
+          `Consumer files: ${formatInlineCode(consumerFileCount)}`,
+          "",
+          "| Used by | Reference | Alias | Args |",
+          "| --- | --- | --- | --- |",
+          ...block.usedBy.map(
+            (usage) => `| ${formatInlineCode(usage.path)} | ${formatInlineCode(usage.reference)} | ${formatOptionalCode(usage.alias)} | ${formatArgsCell(usage.args)} |`,
+          ),
+          "",
+        );
+      }
+    }
+  }
+
+  lines.push("## File Dependency Index", "");
+
+  if (report.files.length === 0) {
+    lines.push("No Markdown files were processed.", "");
+  } else {
+    for (const file of report.files) {
+      lines.push(
+        `### ${formatInlineCode(file.path)}`,
+        `Dependencies: ${formatInlineCode(file.dependencyCount)}`,
+        `Type mix: ${formatInlineCode(formatTypeMix(file.dependencies))}`,
+        "",
+      );
+
+      if (file.dependencies.length === 0) {
+        lines.push("No dependencies found.", "");
+        continue;
+      }
+
+      lines.push(
+        "| Type | Reference | Target block | Alias | Args |",
+        "| --- | --- | --- | --- | --- |",
+        ...file.dependencies.map(
+          (dependency) =>
+            `| ${formatInlineCode(dependency.type)} | ${formatInlineCode(dependency.reference)} | ${formatInlineCode(`${dependency.target}#${dependency.blockId}`)} | ${formatOptionalCode(dependency.alias)} | ${formatArgsCell(dependency.args)} |`,
+        ),
+        "",
+      );
+    }
+  }
+
+  lines.push(
+    "## Notes",
+    "",
+    "- This report shows direct dependencies only.",
+    "- Block identity is `type + target file + block id`.",
+    "- Unused shared blocks are not listed.",
+    "- Short references are resolved within their block type inside `sharedDir`.",
+    "",
+  );
+
+  return lines.join("\n");
+}
+
 async function readUtf8(filePath) {
   try {
     return await readFile(filePath, "utf8");
@@ -166,4 +330,97 @@ function comparePathEntries(left, right) {
   }
 
   return left.reference.localeCompare(right.reference);
+}
+
+function countDependencyTypes(files) {
+  const counts = {
+    markdown: 0,
+    diagram: 0,
+    fragment: 0,
+  };
+
+  for (const file of files) {
+    for (const dependency of file.dependencies) {
+      counts[dependency.type] += 1;
+    }
+  }
+
+  return counts;
+}
+
+function compareBlockHotspots(left, right) {
+  if (left.useCount !== right.useCount) {
+    return right.useCount - left.useCount;
+  }
+
+  const leftConsumerFileCount = countUniquePaths(left.usedBy);
+  const rightConsumerFileCount = countUniquePaths(right.usedBy);
+  if (leftConsumerFileCount !== rightConsumerFileCount) {
+    return rightConsumerFileCount - leftConsumerFileCount;
+  }
+
+  const leftKey = `${sortTypeIndex(left.type)}:${left.target}#${left.blockId}`;
+  const rightKey = `${sortTypeIndex(right.type)}:${right.target}#${right.blockId}`;
+  return leftKey.localeCompare(rightKey);
+}
+
+function compareFileHotspots(left, right) {
+  if (left.dependencyCount !== right.dependencyCount) {
+    return right.dependencyCount - left.dependencyCount;
+  }
+
+  return left.path.localeCompare(right.path);
+}
+
+function countUniquePaths(entries) {
+  return new Set(entries.map((entry) => entry.path)).size;
+}
+
+function formatTypeMix(dependencies) {
+  const counts = {
+    markdown: 0,
+    diagram: 0,
+    fragment: 0,
+  };
+
+  for (const dependency of dependencies) {
+    counts[dependency.type] += 1;
+  }
+
+  const parts = REPORT_TYPE_ORDER
+    .filter((type) => counts[type] > 0)
+    .map((type) => `${counts[type]} ${type}`);
+
+  return parts.length > 0 ? parts.join(", ") : "none";
+}
+
+function formatArgsCell(args) {
+  const entries = Object.entries(args);
+  if (entries.length === 0) {
+    return "-";
+  }
+
+  return formatInlineCode(
+    entries
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
+      .join(", "),
+  );
+}
+
+function formatOptionalCode(value) {
+  return value ? formatInlineCode(value) : "-";
+}
+
+function formatInlineCode(value) {
+  const text = String(value);
+  const backtickRuns = text.match(/`+/g) ?? [];
+  const wrapperLength = Math.max(0, ...backtickRuns.map((run) => run.length)) + 1;
+  const wrapper = "`".repeat(wrapperLength);
+  return `${wrapper}${text}${wrapper}`;
+}
+
+function sortTypeIndex(type) {
+  const index = REPORT_TYPE_ORDER.indexOf(type);
+  return index === -1 ? REPORT_TYPE_ORDER.length : index;
 }

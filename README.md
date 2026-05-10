@@ -638,7 +638,7 @@ mdmm build ./docs --no-validate
 Syntax:
 
 ```bash
-mdmm report [<input.md|input-dir>] [--output <report.json>]
+mdmm report [<input.md|input-dir>] [--output <report-path>] [--format <json|markdown>]
 ```
 
 When to use it:
@@ -658,18 +658,25 @@ What the report contains:
 - passed template arguments;
 - a block usage summary.
 
+Formats:
+
+- `json` is the default and is meant for tooling or scripting;
+- `markdown` is a human-readable view with a summary, hotspots, block usage index, and file dependency index.
+
 ### Parameters For `report`
 
 | Parameter | Default | What it does |
 | --- | --- | --- |
 | `<input.md|input-dir>` | `docsDir` from config or `./docs` | sets the file or directory for the report |
-| `--output <report.json>` | stdout | writes the JSON report to a file |
+| `--output <report-path>` | stdout | writes the report to a file |
+| `--format <json|markdown>` | `json` | selects machine-readable JSON or a human-readable Markdown report |
 
 Examples:
 
 ```bash
 mdmm report
 mdmm report ./docs --output ./dist/dependencies.json
+mdmm report ./docs --format markdown --output ./dist/dependencies.md
 mdmm report ./docs/customer-flow.md
 ```
 

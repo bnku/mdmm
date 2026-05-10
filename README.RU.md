@@ -635,7 +635,7 @@ mdmm build ./docs --no-validate
 Синтаксис:
 
 ```bash
-mdmm report [<input.md|input-dir>] [--output <report.json>]
+mdmm report [<input.md|input-dir>] [--output <report-path>] [--format <json|markdown>]
 ```
 
 Когда использовать:
@@ -655,18 +655,25 @@ mdmm report [<input.md|input-dir>] [--output <report.json>]
 - переданные аргументы шаблонов;
 - сводка по использованию блоков.
 
+Форматы:
+
+- `json` используется по умолчанию и удобен для скриптов и инструментов;
+- `markdown` дает человекочитаемое представление со сводкой, hotspots, индексом использования блоков и индексом зависимостей по файлам.
+
 ### Параметры `report`
 
 | Параметр | По умолчанию | Что делает |
 | --- | --- | --- |
 | `<input.md|input-dir>` | `docsDir` из конфига или `./docs` | задает файл или каталог для отчета |
-| `--output <report.json>` | стандартный вывод | записывает JSON-отчет в файл |
+| `--output <report-path>` | стандартный вывод | записывает отчет в файл |
+| `--format <json|markdown>` | `json` | выбирает machine-readable JSON или человекочитаемый Markdown-отчет |
 
 Примеры:
 
 ```bash
 mdmm report
 mdmm report ./docs --output ./dist/dependencies.json
+mdmm report ./docs --format markdown --output ./dist/dependencies.md
 mdmm report ./docs/customer-flow.md
 ```
 
