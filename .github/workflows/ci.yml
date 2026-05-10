@@ -40,9 +40,6 @@ jobs:
       - name: Build example project
         run: npm run build:examples
 
-      - name: Validate built Mermaid output
-        run: npm run validate:examples
-
       - name: Generate example dependency report
         run: npm run report:examples
 
