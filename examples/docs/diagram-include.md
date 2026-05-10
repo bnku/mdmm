@@ -8,6 +8,6 @@ customer-verification.overview
 
 Short subprocess via explicit path ref:
 
-```mermaid-include
+```mm-include
 ../shared/customer-verification.md#customer-verification.short
 ```

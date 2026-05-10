@@ -8,9 +8,11 @@ import { loadProjectSettings } from "./project.js";
 import { resolveBlockReference, resolveReferenceText } from "./references.js";
 import { normalizeTemplateArgs, renderTemplate } from "./templates.js";
 
-const INCLUDE_BLOCK_PATTERN = /```mermaid-include[^\n]*\r?\n([\s\S]*?)\r?\n```/g;
+const DIAGRAM_INCLUDE_BLOCK_PATTERN = /```(?:mermaid|mm)-include[^\n]*\r?\n([\s\S]*?)\r?\n```/g;
+const MARKDOWN_INCLUDE_BLOCK_PATTERN = /```(?:markdown|md)-include[^\n]*\r?\n([\s\S]*?)\r?\n```/g;
 const MERMAID_FENCE_PATTERN = /```mermaid(?!-)([^\n]*)\r?\n([\s\S]*?)\r?\n```/g;
-const MERMAID_INCLUDE_SENTINEL = "```mermaid-include";
+const DIAGRAM_INCLUDE_SENTINEL = /```(?:mermaid|mm)-include/m;
+const MARKDOWN_INCLUDE_SENTINEL = /```(?:markdown|md)-include/m;
 const FRAGMENT_INCLUDE_SENTINEL = /(^|\n)\s*%%\s*include:/m;
 
 export { MermaidIncludeError } from "./errors.js";
@@ -62,12 +64,17 @@ export async function preprocessFile(inputPath, outputPath, options = {}) {
 }
 
 async function resolveMarkdown(markdown, currentFilePath, context, stack) {
-  const withDiagramIncludes = await replaceAsync(markdown, INCLUDE_BLOCK_PATTERN, async (match, rawReference) => {
-    const reference = await resolveBlockReference(rawReference, currentFilePath, "mermaid-include", context);
+  const withDiagramIncludes = await replaceAsync(markdown, DIAGRAM_INCLUDE_BLOCK_PATTERN, async (match, rawReference) => {
+    const reference = await resolveBlockReference(rawReference, currentFilePath, "mermaid-include", context, "diagram");
     return resolveDiagramBlockReference(reference, context, stack);
   });
 
-  return replaceAsync(withDiagramIncludes, MERMAID_FENCE_PATTERN, async (match, infoSuffix, body) => {
+  const withMarkdownIncludes = await replaceAsync(withDiagramIncludes, MARKDOWN_INCLUDE_BLOCK_PATTERN, async (match, rawReference) => {
+    const reference = await resolveBlockReference(rawReference, currentFilePath, "markdown-include", context, "markdown");
+    return resolveMarkdownBlockReference(reference, context, stack);
+  });
+
+  return replaceAsync(withMarkdownIncludes, MERMAID_FENCE_PATTERN, async (match, infoSuffix, body) => {
     const resolvedBody = await resolveFragmentIncludesInCode(body, currentFilePath, context, stack);
     return buildFence("mermaid", infoSuffix, resolvedBody);
   });
@@ -89,6 +96,23 @@ async function resolveDiagramBlockReference(reference, context, stack) {
   }
 
   return block.resolvedDiagramContent.get(invocationKey);
+}
+
+async function resolveMarkdownBlockReference(reference, context, stack) {
+  recordDependencyEvent(reference, context, stack, "markdown");
+  const block = await getBlock(reference, context, "markdown");
+  const invocationKey = getInvocationCacheKey(reference.args ?? {});
+
+  if (!block.resolvedMarkdownContent.has(invocationKey)) {
+    const nextStack = pushBlockToStack(reference, stack, context.maxIncludeDepth);
+    const renderedContent = renderTemplate(block.rawContent, reference.args ?? {}, reference);
+    const expanded = await resolveMarkdown(renderedContent, reference.filePath, context, nextStack);
+    const trimmedExpanded = expanded.trim();
+    assertNoUnresolvedDirectives(trimmedExpanded, reference.filePath, reference.blockId);
+    block.resolvedMarkdownContent.set(invocationKey, trimmedExpanded);
+  }
+
+  return block.resolvedMarkdownContent.get(invocationKey);
 }
 
 async function resolveFragmentBlockReference(reference, context, stack) {
@@ -143,7 +167,7 @@ async function resolveFragmentIncludesInCode(body, currentFilePath, context, sta
       );
     }
 
-    const reference = await resolveReferenceText(directive.referenceText, currentFilePath, "fragment include", context);
+    const reference = await resolveReferenceText(directive.referenceText, currentFilePath, "fragment include", context, "fragment");
     const fragment = await resolveFragmentBlockReference(
       { ...reference, args: directive.args, invocationFilePath: currentFilePath },
       context,
@@ -410,8 +434,14 @@ function assertNoUnresolvedDirectives(markdown, filePath, blockId) {
     ? `block ${blockId} in ${path.relative(process.cwd(), filePath)}`
     : path.relative(process.cwd(), filePath);
 
-  if (markdown.includes(MERMAID_INCLUDE_SENTINEL)) {
+  if (DIAGRAM_INCLUDE_SENTINEL.test(markdown)) {
     throw new MermaidIncludeError(`Unresolved mermaid-include directive left in ${target}`, {
+      code: "UNRESOLVED_DIRECTIVE",
+    });
+  }
+
+  if (MARKDOWN_INCLUDE_SENTINEL.test(markdown)) {
+    throw new MermaidIncludeError(`Unresolved markdown-include directive left in ${target}`, {
       code: "UNRESOLVED_DIRECTIVE",
     });
   }
@@ -429,6 +459,8 @@ function recordDependencyEvent(reference, context, stack, type) {
     reference: reference.referenceText,
     referenceKind: reference.referenceKind ?? "explicit",
     shortBlockId: reference.shortBlockId ?? null,
+    shortBlockType: reference.shortBlockType ?? null,
+    shortRefKey: reference.shortRefKey ?? null,
     resolvedFilePath: reference.filePath,
     blockId: reference.blockId,
     sourceFilePath: reference.invocationFilePath ?? context.entryFilePath,

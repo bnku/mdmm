@@ -527,7 +527,7 @@ function printCommandHelp(logger, command) {
         `  ${COMMANDS.report.usage}`,
         "",
         "What it does:",
-        "  Builds a JSON usage map for diagram and fragment dependencies.",
+        "  Builds a JSON usage map for Markdown, diagram, and fragment dependencies.",
         "",
         "Examples:",
         "  mdmm report",

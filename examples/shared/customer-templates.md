@@ -20,13 +20,13 @@ review --> done["Decision for %owner|Sales Ops%"]
 ```
 <!-- /mermaid:fragment -->
 
-<!-- mermaid:fragment template-audit exports=entry,done -->
+<!-- mm:fragment template-audit exports=entry,done -->
 ```mermaid
 flowchart TD
 entry["Audit %owner|Sales Ops%: %reviewer|Finance%"]
 entry --> done["Close"]
 ```
-<!-- /mermaid:fragment -->
+<!-- /mm:fragment -->
 
 <!-- mermaid:block template.wrapper -->
 ```mermaid
@@ -38,3 +38,7 @@ Start --> lane__entry
 lane__done --> End
 ```
 <!-- /mermaid:block -->
+
+<!-- md:block template.markdown -->
+### Hello %name|World%
+<!-- /md:block -->

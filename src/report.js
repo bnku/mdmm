@@ -7,7 +7,8 @@ import { loadProjectSettings } from "./project.js";
 import { resolveBlockReference, resolveReferenceText } from "./references.js";
 import { normalizeTemplateArgs } from "./templates.js";
 
-const WHOLE_INCLUDE_PATTERN = /```mermaid-include[^\n]*\r?\n([\s\S]*?)\r?\n```/g;
+const DIAGRAM_INCLUDE_PATTERN = /```(?:mermaid|mm)-include[^\n]*\r?\n([\s\S]*?)\r?\n```/g;
+const MARKDOWN_INCLUDE_PATTERN = /```(?:markdown|md)-include[^\n]*\r?\n([\s\S]*?)\r?\n```/g;
 const MERMAID_FENCE_PATTERN = /```mermaid(?!-)([^\n]*)\r?\n([\s\S]*?)\r?\n```/g;
 
 export async function buildDependencyReport(filePaths, options = {}) {
@@ -80,10 +81,22 @@ export async function buildDependencyReport(filePaths, options = {}) {
 export async function collectFileDependencies(markdown, currentFilePath, context) {
   const dependencies = [];
 
-  for (const match of markdown.matchAll(WHOLE_INCLUDE_PATTERN)) {
-    const reference = await resolveBlockReference(match[1], currentFilePath, "mermaid-include", context);
+  for (const match of markdown.matchAll(DIAGRAM_INCLUDE_PATTERN)) {
+    const reference = await resolveBlockReference(match[1], currentFilePath, "mermaid-include", context, "diagram");
     dependencies.push({
       type: "diagram",
+      reference: reference.referenceText,
+      resolvedFilePath: reference.filePath,
+      blockId: reference.blockId,
+      alias: null,
+      args: normalizeTemplateArgs(reference.args ?? {}),
+    });
+  }
+
+  for (const match of markdown.matchAll(MARKDOWN_INCLUDE_PATTERN)) {
+    const reference = await resolveBlockReference(match[1], currentFilePath, "markdown-include", context, "markdown");
+    dependencies.push({
+      type: "markdown",
       reference: reference.referenceText,
       resolvedFilePath: reference.filePath,
       blockId: reference.blockId,
@@ -102,7 +115,7 @@ export async function collectFileDependencies(markdown, currentFilePath, context
         continue;
       }
 
-      const reference = await resolveReferenceText(directive.referenceText, currentFilePath, "fragment include", context);
+      const reference = await resolveReferenceText(directive.referenceText, currentFilePath, "fragment include", context, "fragment");
       dependencies.push({
         type: "fragment",
         reference: reference.referenceText,

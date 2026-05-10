@@ -14,7 +14,7 @@ template.wrapper fragmentRef=template-verification reviewer=Legal
 
 Nested include with explicit path `fragmentRef`:
 
-```mermaid-include
+```mm-include
 template.wrapper
 fragmentRef = ../shared/customer-templates.md#template-audit
 reviewer = Legal

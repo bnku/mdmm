@@ -112,6 +112,147 @@ customer.overview
   assert.match(output, /flowchart TD\nA --> B/);
 });
 
+test("builds markdown includes with nested diagram includes", async () => {
+  const rootDir = await createWorkspace();
+
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/library.md",
+    `<!-- markdown:block customer.section -->
+## Customer Overview
+
+This section is shared.
+
+\`\`\`mermaid-include
+customer.overview
+\`\`\`
+<!-- /markdown:block -->
+
+<!-- mermaid:block customer.overview -->
+\`\`\`mermaid
+flowchart TD
+Start --> Done
+\`\`\`
+<!-- /mermaid:block -->
+`,
+  );
+
+  const inputPath = await writeWorkspaceFile(
+    rootDir,
+    "docs/process.md",
+    `# Process
+
+\`\`\`markdown-include
+customer.section
+\`\`\`
+`,
+  );
+
+  const output = await preprocessFile(inputPath, undefined, { cwd: rootDir });
+
+  assert.match(output, /## Customer Overview/);
+  assert.match(output, /This section is shared\./);
+  assert.match(output, /```mermaid\nflowchart TD\nStart --> Done\n```/);
+  assert.doesNotMatch(output, /```markdown-include/);
+  assert.doesNotMatch(output, /```mermaid-include/);
+});
+
+test("supports short aliases for markdown, diagram, and fragment reuse", async () => {
+  const rootDir = await createWorkspace();
+
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/library.md",
+    `<!-- md:block customer.section -->
+Shared section.
+
+\`\`\`mm-include
+customer.overview
+\`\`\`
+<!-- /md:block -->
+
+<!-- mm:block customer.overview -->
+\`\`\`mermaid
+flowchart TD
+Idea --> Publish
+\`\`\`
+<!-- /mm:block -->
+
+<!-- mm:fragment customer.fragment exports=entry,done -->
+\`\`\`mermaid
+flowchart TD
+entry[Entry] --> done[Done]
+\`\`\`
+<!-- /mm:fragment -->
+`,
+  );
+
+  const inputPath = await writeWorkspaceFile(
+    rootDir,
+    "docs/process.md",
+    `\`\`\`md-include
+customer.section
+\`\`\`
+
+\`\`\`mermaid
+flowchart TD
+Start --> flow__entry
+%% include: customer.fragment as flow
+flow__done --> Finish
+\`\`\`
+`,
+  );
+
+  const output = await preprocessFile(inputPath, undefined, { cwd: rootDir });
+
+  assert.match(output, /Shared section\./);
+  assert.match(output, /```mermaid\nflowchart TD\nIdea --> Publish\n```/);
+  assert.match(output, /flow__entry\[Entry\] --> flow__done\[Done\]/);
+});
+
+test("scopes short references by block type", async () => {
+  const rootDir = await createWorkspace();
+
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/diagram.md",
+    `<!-- mermaid:block customer.shared -->
+\`\`\`mermaid
+flowchart TD
+Diagram --> Done
+\`\`\`
+<!-- /mermaid:block -->
+`,
+  );
+
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/content.md",
+    `<!-- markdown:block customer.shared -->
+Shared Markdown section.
+<!-- /markdown:block -->
+`,
+  );
+
+  const inputPath = await writeWorkspaceFile(
+    rootDir,
+    "docs/process.md",
+    `\`\`\`markdown-include
+customer.shared
+\`\`\`
+
+\`\`\`mermaid-include
+customer.shared
+\`\`\`
+`,
+  );
+
+  const output = await preprocessFile(inputPath, undefined, { cwd: rootDir });
+
+  assert.match(output, /Shared Markdown section\./);
+  assert.match(output, /```mermaid\nflowchart TD\nDiagram --> Done\n```/);
+});
+
 test("fails when referenced file does not exist", async () => {
   const rootDir = await createWorkspace();
   const inputPath = await writeWorkspaceFile(
@@ -364,6 +505,42 @@ escalator = Finance Lead
   assert.match(output, /owner\["Sales Ops"\]/);
   assert.match(output, /escalator\["Finance Lead"\]/);
   assert.match(output, /review\{"Review by Finance\?"\}/);
+});
+
+test("builds markdown block templates with inline and multiline arguments", async () => {
+  const rootDir = await createWorkspace();
+
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/library.md",
+    `<!-- markdown:block customer.section -->
+## %title|Customer verification%
+
+Owner: %owner%
+<!-- /markdown:block -->
+`,
+  );
+
+  const inputPath = await writeWorkspaceFile(
+    rootDir,
+    "docs/process.md",
+    `\`\`\`markdown-include
+customer.section
+owner = Risk office
+\`\`\`
+
+\`\`\`markdown-include
+customer.section title="Partner onboarding" owner=Operations
+\`\`\`
+`,
+  );
+
+  const output = await preprocessFile(inputPath, undefined, { cwd: rootDir });
+
+  assert.match(output, /## Customer verification/);
+  assert.match(output, /Owner: Risk office/);
+  assert.match(output, /## Partner onboarding/);
+  assert.match(output, /Owner: Operations/);
 });
 
 test("builds fragment templates with inline and multiline arguments", async () => {
@@ -1317,6 +1494,50 @@ kyc__success --> Done
   assert.equal(report.files[0].dependencies[0].type, "diagram");
   assert.equal(report.files[0].dependencies[1].type, "fragment");
   assert.equal(report.files[0].dependencies[1].alias, "kyc");
+});
+
+test("report command includes markdown dependencies", async () => {
+  const rootDir = await createWorkspace();
+
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/library.md",
+    `<!-- markdown:block customer.section -->
+Shared Markdown section.
+<!-- /markdown:block -->
+
+<!-- mermaid:block customer.diagram -->
+\`\`\`mermaid
+flowchart TD
+Start --> Done
+\`\`\`
+<!-- /mermaid:block -->
+`,
+  );
+
+  const inputPath = await writeWorkspaceFile(
+    rootDir,
+    "docs/journey.md",
+    `\`\`\`markdown-include
+customer.section
+\`\`\`
+
+\`\`\`mermaid-include
+customer.diagram
+\`\`\`
+`,
+  );
+
+  const { stdout } = await execFileAsync(process.execPath, [cliPath, "report", inputPath], {
+    cwd: rootDir,
+  });
+
+  const report = JSON.parse(stdout);
+  assert.equal(report.summary.dependencyCount, 2);
+  assert.deepEqual(
+    report.files[0].dependencies.map((dependency) => dependency.type).sort(),
+    ["diagram", "markdown"],
+  );
 });
 
 test("report command includes template arguments for diagram and fragment dependencies", async () => {

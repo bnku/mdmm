@@ -16,7 +16,7 @@ export function createDependencyGraph(options = {}) {
     sharedDeclarations: new Map(),
     docsByResolvedBlockKey: new Map(),
     docsByResolvedFilePath: new Map(),
-    docsByShortRefBlockId: new Map(),
+    docsByShortRefKey: new Map(),
   };
 }
 
@@ -37,7 +37,7 @@ export async function scanSharedDeclarations(sharedDir) {
     const markdown = await readFile(filePath, "utf8");
     const blocks = extractBlocks(markdown, filePath);
     declarations.set(filePath, {
-      blockIds: new Set(blocks.keys()),
+      shortRefKeys: new Set([...blocks.entries()].map(([blockId, block]) => formatShortRefKey(block.type, blockId))),
     });
   }
 
@@ -74,7 +74,7 @@ export function upsertDocumentState(graph, docPath, dependencies) {
     dependencies,
     resolvedBlockKeys: new Set(),
     resolvedFilePaths: new Set(),
-    shortRefBlockIds: new Set(),
+    shortRefKeys: new Set(),
   };
 
   for (const dependency of dependencies) {
@@ -82,8 +82,8 @@ export function upsertDocumentState(graph, docPath, dependencies) {
     state.resolvedBlockKeys.add(blockKey);
     state.resolvedFilePaths.add(dependency.resolvedFilePath);
 
-    if (dependency.shortBlockId) {
-      state.shortRefBlockIds.add(dependency.shortBlockId);
+    if (dependency.shortRefKey) {
+      state.shortRefKeys.add(dependency.shortRefKey);
     }
   }
 
@@ -98,8 +98,8 @@ export function upsertDocumentState(graph, docPath, dependencies) {
     addIndexEntry(graph.docsByResolvedFilePath, filePath, docPath);
   }
 
-  for (const blockId of state.shortRefBlockIds) {
-    addIndexEntry(graph.docsByShortRefBlockId, blockId, docPath);
+  for (const shortRefKey of state.shortRefKeys) {
+    addIndexEntry(graph.docsByShortRefKey, shortRefKey, docPath);
   }
 }
 
@@ -109,12 +109,12 @@ export function replaceSharedDeclarations(graph, declarations) {
 
 export function diffSharedDeclarations(previousDeclarations, nextDeclarations) {
   const changedFiles = new Set();
-  const changedBlockIds = new Set();
+  const changedShortRefKeys = new Set();
   const allFiles = new Set([...previousDeclarations.keys(), ...nextDeclarations.keys()]);
 
   for (const filePath of allFiles) {
-    const previous = previousDeclarations.get(filePath)?.blockIds ?? new Set();
-    const next = nextDeclarations.get(filePath)?.blockIds ?? new Set();
+    const previous = previousDeclarations.get(filePath)?.shortRefKeys ?? new Set();
+    const next = nextDeclarations.get(filePath)?.shortRefKeys ?? new Set();
 
     if (setsAreEqual(previous, next)) {
       continue;
@@ -123,17 +123,17 @@ export function diffSharedDeclarations(previousDeclarations, nextDeclarations) {
     changedFiles.add(filePath);
 
     for (const blockId of previous) {
-      changedBlockIds.add(blockId);
+      changedShortRefKeys.add(blockId);
     }
 
     for (const blockId of next) {
-      changedBlockIds.add(blockId);
+      changedShortRefKeys.add(blockId);
     }
   }
 
   return {
     changedFiles,
-    changedBlockIds,
+    changedShortRefKeys,
   };
 }
 
@@ -151,8 +151,8 @@ function removeDocumentState(graph, docPath) {
     removeIndexEntry(graph.docsByResolvedFilePath, filePath, docPath);
   }
 
-  for (const blockId of previousState.shortRefBlockIds) {
-    removeIndexEntry(graph.docsByShortRefBlockId, blockId, docPath);
+  for (const shortRefKey of previousState.shortRefKeys) {
+    removeIndexEntry(graph.docsByShortRefKey, shortRefKey, docPath);
   }
 
   graph.docStates.delete(docPath);
@@ -194,4 +194,8 @@ function setsAreEqual(left, right) {
   }
 
   return true;
+}
+
+function formatShortRefKey(blockType, blockId) {
+  return `${blockType}:${blockId}`;
 }

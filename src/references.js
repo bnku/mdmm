@@ -5,11 +5,11 @@ import process from "node:process";
 import { extractBlocks } from "./blocks.js";
 import { MermaidIncludeError } from "./errors.js";
 import { listMarkdownFiles } from "./files.js";
-import { parseDiagramIncludeDirective } from "./include-parser.js";
+import { parseBlockIncludeDirective } from "./include-parser.js";
 
-export async function resolveBlockReference(rawReference, currentFilePath, sourceName, context) {
-  const directive = parseDiagramIncludeDirective(rawReference, currentFilePath, sourceName);
-  const reference = await resolveReferenceText(directive.referenceText, currentFilePath, sourceName, context);
+export async function resolveBlockReference(rawReference, currentFilePath, sourceName, context, expectedType = "diagram") {
+  const directive = parseBlockIncludeDirective(rawReference, currentFilePath, sourceName);
+  const reference = await resolveReferenceText(directive.referenceText, currentFilePath, sourceName, context, expectedType);
   return {
     ...reference,
     args: directive.args,
@@ -17,7 +17,7 @@ export async function resolveBlockReference(rawReference, currentFilePath, sourc
   };
 }
 
-export async function resolveReferenceText(referenceText, currentFilePath, sourceName, context) {
+export async function resolveReferenceText(referenceText, currentFilePath, sourceName, context, expectedType = "diagram") {
   const trimmedReference = referenceText.trim();
   const separatorIndex = trimmedReference.lastIndexOf("#");
 
@@ -29,11 +29,12 @@ export async function resolveReferenceText(referenceText, currentFilePath, sourc
     throwInvalidReference(referenceText, currentFilePath, sourceName);
   }
 
-  return resolveShortReference(trimmedReference, currentFilePath, context);
+  return resolveShortReference(trimmedReference, currentFilePath, context, expectedType);
 }
 
-async function resolveShortReference(blockId, currentFilePath, context) {
-  const matches = (await loadSharedBlockIndex(context)).get(blockId) ?? [];
+async function resolveShortReference(blockId, currentFilePath, context, expectedType) {
+  const shortRefKey = formatShortRefKey(expectedType, blockId);
+  const matches = (await loadSharedBlockIndex(context)).get(shortRefKey) ?? [];
 
   if (matches.length === 0) {
     throw new MermaidIncludeError(
@@ -60,6 +61,8 @@ async function resolveShortReference(blockId, currentFilePath, context) {
     referenceText: blockId,
     referenceKind: "short",
     shortBlockId: blockId,
+    shortBlockType: expectedType,
+    shortRefKey,
   };
 }
 
@@ -78,6 +81,8 @@ function parseExplicitReference(referenceText, currentFilePath, sourceName) {
     referenceText,
     referenceKind: "explicit",
     shortBlockId: null,
+    shortBlockType: null,
+    shortRefKey: null,
   };
 }
 
@@ -106,14 +111,19 @@ async function buildSharedBlockIndex(sharedDir) {
     const markdown = await readFile(filePath, "utf8");
     const blocks = extractBlocks(markdown, filePath);
 
-    for (const [blockId] of blocks) {
-      if (!index.has(blockId)) {
-        index.set(blockId, []);
+    for (const [blockId, block] of blocks) {
+      const shortRefKey = formatShortRefKey(block.type, blockId);
+      if (!index.has(shortRefKey)) {
+        index.set(shortRefKey, []);
       }
 
-      index.get(blockId).push({ filePath });
+      index.get(shortRefKey).push({ filePath });
     }
   }
 
   return index;
+}
+
+function formatShortRefKey(blockType, blockId) {
+  return `${blockType}:${blockId}`;
 }

@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-05-09T00:26:05.460Z",
+  "generatedAt": "2026-05-10T05:53:33.463Z",
   "rootPath": "examples",
   "summary": {
-    "fileCount": 5,
-    "dependencyCount": 12,
-    "blockCount": 6
+    "fileCount": 6,
+    "dependencyCount": 14,
+    "blockCount": 8
   },
   "files": [
     {
@@ -47,6 +47,28 @@
           "target": "examples/shared/verification-fragment.md",
           "blockId": "verification-fragment",
           "alias": "explicit",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "path": "examples/docs/markdown-include.md",
+      "dependencyCount": 2,
+      "dependencies": [
+        {
+          "type": "markdown",
+          "reference": "customer-verification.section",
+          "target": "examples/shared/markdown-sections.md",
+          "blockId": "customer-verification.section",
+          "alias": null,
+          "args": {}
+        },
+        {
+          "type": "markdown",
+          "reference": "../shared/markdown-sections.md#customer-verification.alias-section",
+          "target": "examples/shared/markdown-sections.md",
+          "blockId": "customer-verification.alias-section",
+          "alias": null,
           "args": {}
         }
       ]
@@ -288,6 +310,34 @@
           "type": "diagram",
           "alias": null,
           "reference": "../shared/customer-verification.md#customer-verification.short",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "target": "examples/shared/markdown-sections.md",
+      "blockId": "customer-verification.alias-section",
+      "useCount": 1,
+      "usedBy": [
+        {
+          "path": "examples/docs/markdown-include.md",
+          "type": "markdown",
+          "alias": null,
+          "reference": "../shared/markdown-sections.md#customer-verification.alias-section",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "target": "examples/shared/markdown-sections.md",
+      "blockId": "customer-verification.section",
+      "useCount": 1,
+      "usedBy": [
+        {
+          "path": "examples/docs/markdown-include.md",
+          "type": "markdown",
+          "alias": null,
+          "reference": "customer-verification.section",
           "args": {}
         }
       ]

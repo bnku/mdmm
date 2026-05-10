@@ -4,11 +4,21 @@ import process from "node:process";
 import { MermaidIncludeError } from "./errors.js";
 
 const BLOCK_ID_PATTERN = "[A-Za-z0-9._-]+";
+const DECLARATION_NAME_PATTERN = "mermaid:block|mm:block|markdown:block|md:block|mermaid:fragment|mm:fragment";
 const OPEN_DECLARATION_PATTERN = new RegExp(
-  `<!--\\s*mermaid:(block|fragment)\\s+(${BLOCK_ID_PATTERN})([^>]*)-->`,
+  `<!--\\s*(${DECLARATION_NAME_PATTERN})\\s+(${BLOCK_ID_PATTERN})([^>]*)-->`,
   "g",
 );
-const CLOSE_DECLARATION_PATTERN = /<!--\s*\/mermaid:(block|fragment)\s*-->/g;
+const CLOSE_DECLARATION_PATTERN = new RegExp(`<!--\\s*\/(${DECLARATION_NAME_PATTERN})\\s*-->`, "g");
+
+const DECLARATION_TYPES = {
+  "mermaid:block": "diagram",
+  "mm:block": "diagram",
+  "markdown:block": "markdown",
+  "md:block": "markdown",
+  "mermaid:fragment": "fragment",
+  "mm:fragment": "fragment",
+};
 
 export function extractBlocks(markdown, filePath) {
   const blocks = new Map();
@@ -20,11 +30,12 @@ export function extractBlocks(markdown, filePath) {
       return blocks;
     }
 
-    const declarationKind = match[1];
+    const declarationName = match[1];
+    const declarationType = getDeclarationType(declarationName);
     const blockId = match[2];
-    const attributes = parseDeclarationAttributes(match[3] ?? "", declarationKind, filePath, blockId);
+    const attributes = parseDeclarationAttributes(match[3] ?? "", declarationName, declarationType, filePath, blockId);
     const rawContentStart = OPEN_DECLARATION_PATTERN.lastIndex;
-    const closeMatch = findClosingDeclaration(markdown, rawContentStart, declarationKind, filePath, blockId);
+    const closeMatch = findClosingDeclaration(markdown, rawContentStart, declarationName, declarationType, filePath, blockId);
     const rawContent = markdown.slice(rawContentStart, closeMatch.index).trim();
 
     if (blocks.has(blockId)) {
@@ -40,41 +51,43 @@ export function extractBlocks(markdown, filePath) {
     blocks.set(blockId, {
       blockId,
       filePath,
-      type: declarationKind === "fragment" ? "fragment" : "diagram",
+      type: declarationType,
       exports: attributes.exports ?? [],
       rawContent,
       resolvedDiagramContent: new Map(),
       resolvedFragment: new Map(),
+      resolvedMarkdownContent: new Map(),
     });
 
     OPEN_DECLARATION_PATTERN.lastIndex = closeMatch.index + closeMatch[0].length;
   }
 }
 
-function findClosingDeclaration(markdown, startIndex, declarationKind, filePath, blockId) {
+function findClosingDeclaration(markdown, startIndex, declarationName, declarationType, filePath, blockId) {
   CLOSE_DECLARATION_PATTERN.lastIndex = startIndex;
   const closeMatch = CLOSE_DECLARATION_PATTERN.exec(markdown);
 
   if (!closeMatch) {
     throw new MermaidIncludeError(
-      `Unclosed mermaid:${declarationKind} declaration for ${blockId} in ${path.relative(process.cwd(), filePath)}`,
+      `Unclosed ${declarationName} declaration for ${blockId} in ${path.relative(process.cwd(), filePath)}`,
       {
         code: "UNCLOSED_BLOCK_DECLARATION",
         blockId,
-        declarationKind,
+        declarationKind: declarationType,
       },
     );
   }
 
-  const closingKind = closeMatch[1];
-  if (closingKind !== declarationKind) {
+  const closingName = closeMatch[1];
+  const closingType = getDeclarationType(closingName);
+  if (closingType !== declarationType) {
     throw new MermaidIncludeError(
-      `Mismatched closing tag for ${blockId} in ${path.relative(process.cwd(), filePath)}. Expected <!-- /mermaid:${declarationKind} --> but found <!-- /mermaid:${closingKind} -->`,
+      `Mismatched closing tag for ${blockId} in ${path.relative(process.cwd(), filePath)}. Expected a closing tag for ${declarationName} but found <!-- /${closingName} -->`,
       {
         code: "MISMATCHED_BLOCK_DECLARATION",
         blockId,
-        declarationKind,
-        closingKind,
+        declarationKind: declarationType,
+        closingKind: closingType,
       },
     );
   }
@@ -82,7 +95,7 @@ function findClosingDeclaration(markdown, startIndex, declarationKind, filePath,
   return closeMatch;
 }
 
-function parseDeclarationAttributes(rawAttributes, declarationKind, filePath, blockId) {
+function parseDeclarationAttributes(rawAttributes, declarationName, declarationType, filePath, blockId) {
   const attributes = {};
   const tokens = rawAttributes.trim().split(/\s+/).filter(Boolean);
 
@@ -96,13 +109,13 @@ function parseDeclarationAttributes(rawAttributes, declarationKind, filePath, bl
     const value = token.slice(separatorIndex + 1);
 
     if (key === "type") {
-      throwTypeAttributeError(value, declarationKind, filePath, blockId);
+      throwTypeAttributeError(value, declarationName, declarationType, filePath, blockId);
     }
 
     if (key === "exports") {
-      if (declarationKind !== "fragment") {
+      if (declarationType !== "fragment") {
         throw new MermaidIncludeError(
-          `Diagram block ${blockId} in ${path.relative(process.cwd(), filePath)} cannot declare exports. Use mermaid:fragment for reusable fragments`,
+          `${formatBlockTypeLabel(declarationType)} ${blockId} in ${path.relative(process.cwd(), filePath)} cannot declare exports. Use mermaid:fragment for reusable Mermaid fragments`,
           {
             code: "INVALID_BLOCK_ATTRIBUTE",
             blockId,
@@ -121,10 +134,10 @@ function parseDeclarationAttributes(rawAttributes, declarationKind, filePath, bl
   return attributes;
 }
 
-function throwTypeAttributeError(value, declarationKind, filePath, blockId) {
-  if (declarationKind === "block" && value === "fragment") {
+function throwTypeAttributeError(value, declarationName, declarationType, filePath, blockId) {
+  if (declarationType === "diagram" && value === "fragment") {
     throw new MermaidIncludeError(
-      `Legacy fragment declaration for ${blockId} in ${path.relative(process.cwd(), filePath)}. Use <!-- mermaid:fragment ${blockId} ... --> and <!-- /mermaid:fragment --> instead of mermaid:block ... type=fragment`,
+      `Legacy fragment declaration for ${blockId} in ${path.relative(process.cwd(), filePath)}. Use <!-- mermaid:fragment ${blockId} ... --> and <!-- /mermaid:fragment --> instead of ${declarationName} ... type=fragment`,
       {
         code: "LEGACY_FRAGMENT_DECLARATION",
         blockId,
@@ -133,7 +146,7 @@ function throwTypeAttributeError(value, declarationKind, filePath, blockId) {
   }
 
   throw new MermaidIncludeError(
-    `Declaration ${blockId} in ${path.relative(process.cwd(), filePath)} should not use type=${value}. mermaid:${declarationKind} already defines the block kind`,
+    `Declaration ${blockId} in ${path.relative(process.cwd(), filePath)} should not use type=${value}. ${declarationName} already defines the block kind`,
     {
       code: "INVALID_BLOCK_ATTRIBUTE",
       blockId,
@@ -141,4 +154,20 @@ function throwTypeAttributeError(value, declarationKind, filePath, blockId) {
       value,
     },
   );
+}
+
+function getDeclarationType(declarationName) {
+  return DECLARATION_TYPES[declarationName];
+}
+
+function formatBlockTypeLabel(blockType) {
+  if (blockType === "diagram") {
+    return "Diagram block";
+  }
+
+  if (blockType === "markdown") {
+    return "Markdown block";
+  }
+
+  return "Fragment block";
 }

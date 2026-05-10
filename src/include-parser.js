@@ -6,7 +6,7 @@ import { MermaidIncludeError } from "./errors.js";
 const ARG_KEY_PATTERN = /^[A-Za-z][A-Za-z0-9_-]*/;
 const FRAGMENT_INCLUDE_PREFIX = "%% include:";
 
-export function parseDiagramIncludeDirective(rawReference, currentFilePath, sourceName) {
+export function parseBlockIncludeDirective(rawReference, currentFilePath, sourceName) {
   const lines = rawReference
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -43,6 +43,8 @@ export function parseDiagramIncludeDirective(rawReference, currentFilePath, sour
     args,
   };
 }
+
+export const parseDiagramIncludeDirective = parseBlockIncludeDirective;
 
 export function parseFragmentIncludeDirectiveGroup(lines, startIndex, currentFilePath) {
   const directiveLine = lines[startIndex];

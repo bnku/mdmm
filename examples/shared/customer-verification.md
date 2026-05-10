@@ -9,10 +9,10 @@ B -- No --> D[Request corrections]
 ```
 <!-- /mermaid:block -->
 
-<!-- mermaid:block customer-verification.short -->
+<!-- mm:block customer-verification.short -->
 ```mermaid
 flowchart LR
 Start[Receive request] --> Review[Review documents]
 Review --> Done[Record result]
 ```
-<!-- /mermaid:block -->
+<!-- /mm:block -->

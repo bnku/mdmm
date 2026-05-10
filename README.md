@@ -7,11 +7,11 @@
 ---
 
 
-`mdmm` is a CLI tool for reusing Mermaid diagrams and Mermaid fragments in Markdown documents. It lets you define shared diagrams and fragments once, include them where needed, and generate plain Markdown with standard `mermaid` blocks as output.
+`mdmm` is a CLI tool for reusing Markdown sections, Mermaid diagrams, and Mermaid fragments in Markdown documents. It lets you define shared blocks once, include them where needed, and generate plain Markdown with standard `mermaid` blocks as output.
 
-The tool follows a simple idea: authors keep working in familiar `Markdown + Mermaid`, without a separate DSL, JSON, or YAML. `mdmm` only adds a minimal syntax for including shared blocks, fragments, and templates, while handling reference validation, argument substitution, and final document assembly.
+The tool follows a simple idea: authors keep working in familiar `Markdown + Mermaid`, without a separate DSL, JSON, or YAML. `mdmm` only adds a minimal syntax for including shared Markdown blocks, diagrams, fragments, and templates, while handling reference validation, argument substitution, and final document assembly.
 
-This makes documentation easier to maintain: repeated diagrams do not need to be copied by hand, updates happen in one place, and the final output stays ready for publication and easy to read for anyone working with plain Markdown.
+This makes documentation easier to maintain: repeated sections and diagrams do not need to be copied by hand, updates happen in one place, and the final output stays ready for publication and easy to read for anyone working with plain Markdown.
 
 ## Table Of Contents
 
@@ -24,11 +24,13 @@ This makes documentation easier to maintain: repeated diagrams do not need to be
 - [The MDMM Authoring Language](#the-mdmm-authoring-language)
   - [Declaring A Reusable Diagram](#1-declaring-a-reusable-diagram)
   - [Including A Diagram](#2-including-a-diagram)
-  - [Declaring And Including A Fragment](#3-declaring-and-including-a-fragment)
-  - [Template Arguments](#4-template-arguments)
-  - [Nested Templates And References](#5-nested-templates-and-references)
-  - [Short And Explicit References](#6-short-and-explicit-references)
-  - [Authoring Recommendations](#7-authoring-recommendations)
+  - [Declaring And Including A Markdown Block](#3-declaring-and-including-a-markdown-block)
+  - [Declaring And Including A Fragment](#4-declaring-and-including-a-fragment)
+  - [Template Arguments](#5-template-arguments)
+  - [Nested Templates And References](#6-nested-templates-and-references)
+  - [Short And Explicit References](#7-short-and-explicit-references)
+  - [Short Aliases](#8-short-aliases)
+  - [Authoring Recommendations](#9-authoring-recommendations)
 - [CLI Commands](#cli-commands)
 - [Default Values Summary](#default-values-summary)
 - [Current Limitations](#current-limitations)
@@ -49,7 +51,7 @@ After `init`, you get a basic project structure, a sample shared diagram, and a 
 
 ## How It Works
 
-1. Store shared Mermaid blocks in a library.
+1. Store shared Markdown blocks, Mermaid diagrams, and Mermaid fragments in a library.
 2. Include them from working documents through `mdmm` directives.
 3. Run `mdmm check` to validate references, template arguments, and language rules.
 4. Use `mdmm dev` during authoring when you want watch mode with selective rebuilds.
@@ -146,14 +148,14 @@ All fields are optional.
 | Field | Default value | Meaning |
 | --- | --- | --- |
 | `docsDir` | `docs` | where source Markdown documents live |
-| `sharedDir` | `shared` | where the reusable Mermaid library lives |
+| `sharedDir` | `shared` | where the reusable Markdown and Mermaid library lives |
 | `outputDir` | `dist` | where directory build output is written |
 
 ## Workflow
 
 A typical workflow looks like this:
 
-1. Put shared diagrams and fragments into `shared/`.
+1. Put shared Markdown blocks, diagrams, and fragments into `shared/`.
 2. Write user-facing documents in `docs/`.
 3. Include the blocks you need through `mdmm` directives.
 4. Run `mdmm check` for a fast validation of references and templates.
@@ -163,7 +165,7 @@ A typical workflow looks like this:
 
 ## The MDMM Authoring Language
 
-`mdmm` adds a minimal set of constructs on top of plain Markdown. They exist only to support Mermaid content reuse.
+`mdmm` adds a minimal set of constructs on top of plain Markdown. They exist only to support reusable Markdown and Mermaid content.
 
 ### 1. Declaring A Reusable Diagram
 
@@ -204,7 +206,33 @@ If you want to point to a specific file explicitly:
 
 After the build, the `mermaid-include` block is replaced with a standard `mermaid` block.
 
-### 3. Declaring And Including A Fragment
+### 3. Declaring And Including A Markdown Block
+
+Use a Markdown block when you want to reuse prose, headings, lists, or mixed Markdown content.
+
+````md
+<!-- markdown:block customer-verification.section -->
+## Customer verification
+
+This section stays in plain Markdown.
+
+```mermaid-include
+customer-verification.overview
+```
+<!-- /markdown:block -->
+````
+
+Including it from another document:
+
+````md
+```markdown-include
+customer-verification.section
+```
+````
+
+After the build, the `markdown-include` block is replaced with the rendered Markdown content.
+
+### 4. Declaring And Including A Fragment
 
 A fragment is useful when you need to insert a standard subprocess into a larger diagram.
 
@@ -253,9 +281,9 @@ Important fragment rules:
 - from outside, you can reference only the nodes listed in `exports`;
 - the first line with the diagram type is kept for the author but is not inserted into the outer diagram.
 
-### 4. Template Arguments
+### 5. Template Arguments
 
-Both diagrams and fragments can use simple parameters.
+Markdown blocks, diagrams, and fragments can use simple parameters.
 
 Example template:
 
@@ -338,7 +366,7 @@ Template rules:
 - redeclaring the same argument causes an error;
 - in one-line form, values with spaces must be quoted.
 
-### 5. Nested Templates And References
+### 6. Nested Templates And References
 
 A template can include another template or fragment.
 
@@ -377,16 +405,28 @@ Path resolution rules in nested templates:
 - if a relative path is passed explicitly as a template argument, it is resolved relative to the document that calls the template;
 - if a relative path is defined as a default value inside the template itself, it is resolved relative to the template file.
 
-### 6. Short And Explicit References
+### 7. Short And Explicit References
 
 | Reference form | Example | Where it is resolved |
 | --- | --- | --- |
-| Short | `customer-verification.overview` | across all `.md` files inside `sharedDir`, recursively |
+| Short | `customer-verification.overview` | across all `.md` files inside `sharedDir`, recursively, within the requested block type |
 | Explicit | `../shared/customer-verification.md#customer-verification.overview` | the path is resolved relative to the current document |
 
-Short references are more convenient for daily work. `mdmm` resolves them by `block id` across the entire `sharedDir` tree, so the identifier must be unique within the shared library. Explicit references are useful when you need to point to a specific file unambiguously.
+Short references are more convenient for daily work. `mdmm` resolves them by `block id` across the entire `sharedDir` tree, but it scopes the lookup by the include kind: `mermaid-include` looks for reusable diagrams, `markdown-include` looks for reusable Markdown blocks, and fragment includes look for reusable fragments. That means the same `block id` can exist once per block type without creating a short-ref conflict. Explicit references are useful when you need to point to a specific file unambiguously.
 
-### 7. Authoring Recommendations
+### 8. Short Aliases
+
+Short aliases are supported for authors who prefer less typing:
+
+- `mm:block` for `mermaid:block`
+- `mm:fragment` for `mermaid:fragment`
+- `md:block` for `markdown:block`
+- `mm-include` for `mermaid-include`
+- `md-include` for `markdown-include`
+
+The examples in this README intentionally use the long forms because they are clearer for first-time readers. The short aliases behave the same way.
+
+### 9. Authoring Recommendations
 
 - use template arguments in labels, comments, and argument values;
 - do not use `%...%` in node ids, `alias`, or the diagram type line;
@@ -551,7 +591,7 @@ When to use it:
 
 What `build` does:
 
-- expands diagram includes and fragment includes;
+- expands Markdown includes, diagram includes, and fragment includes;
 - substitutes template arguments;
 - validates final Mermaid blocks by default;
 - writes the result to a file or directory;
@@ -604,14 +644,14 @@ mdmm report [<input.md|input-dir>] [--output <report.json>]
 When to use it:
 
 - when you want to understand where shared blocks are used;
-- when you are cleaning up the diagram library;
-- when you need to estimate the impact of changing a shared diagram.
+- when you are cleaning up the shared block library;
+- when you need to estimate the impact of changing a shared block.
 
 What the report contains:
 
 - the list of processed Markdown files;
 - dependencies for each file;
-- dependency type: `diagram` or `fragment`;
+- dependency type: `markdown`, `diagram`, or `fragment`;
 - the original author reference;
 - the target file and `block id`;
 - the `alias` for fragment includes;
@@ -649,7 +689,6 @@ It is intended for a future workflow where an existing documentation set needs r
 
 | Area | Parameter | Default value |
 | --- | --- | --- |
-| Block declaration | `type` | `diagram` |
 | Project config | `docsDir` | `docs` |
 | Project config | `sharedDir` | `shared` |
 | Project config | `outputDir` | `dist` |
@@ -673,8 +712,8 @@ It is intended for a future workflow where an existing documentation set needs r
 
 ## Current Limitations
 
-- a reusable block must ultimately expand into exactly one `mermaid` block;
-- a short reference is defined only by `block id`; `mdmm` resolves it across all Markdown files inside `sharedDir`, recursively, so it must be unique within the shared library;
+- a reusable diagram block must ultimately expand into exactly one `mermaid` block;
+- a short reference is resolved by `block id` within its block type across all Markdown files inside `sharedDir`, recursively;
 - an explicit reference must always use the `path/to/file.md#block-id` form;
 - fragments allow external references only to nodes listed in `exports`;
 - `alias` must be unique within a single `mermaid` block;
@@ -696,7 +735,7 @@ No. The tool can work without a config file. But for regular project work, the c
 
 **Where does `mdmm` look for short references?**
 
-Only inside `sharedDir`. If you need to point to a specific file, use an explicit reference like `path/to/file.md#block-id`.
+Only inside `sharedDir`. The lookup is scoped by block type: `mermaid-include` resolves diagram blocks, `markdown-include` resolves Markdown blocks, and fragment includes resolve fragment blocks. If you need to point to a specific file, use an explicit reference like `path/to/file.md#block-id`.
 
 **Why does `build` sometimes fail even when `check` passes?**
 
@@ -704,4 +743,4 @@ Only inside `sharedDir`. If you need to point to a specific file, use an explici
 
 **What do I get after `build`?**
 
-Plain Markdown where all `mdmm` directives have already been expanded into standard `mermaid` blocks.
+Plain Markdown where all `mdmm` directives have already been expanded, with reusable Markdown content inlined and Mermaid output left as standard `mermaid` blocks.

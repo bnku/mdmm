@@ -195,7 +195,7 @@ class DevSession {
     const addedDocs = difference(nextSourceDocs, activeGraph.sourceDocs);
 
     let nextSharedDeclarations = activeGraph.sharedDeclarations;
-    let sharedDiff = { changedFiles: new Set(), changedBlockIds: new Set() };
+    let sharedDiff = { changedFiles: new Set(), changedShortRefKeys: new Set() };
 
     if (touchesShared) {
       try {
@@ -248,8 +248,8 @@ class DevSession {
       addAll(affectedDocs, activeGraph.docsByResolvedFilePath.get(filePath));
     }
 
-    for (const blockId of sharedDiff.changedBlockIds) {
-      addAll(affectedDocs, activeGraph.docsByShortRefBlockId.get(blockId));
+    for (const shortRefKey of sharedDiff.changedShortRefKeys) {
+      addAll(affectedDocs, activeGraph.docsByShortRefKey.get(shortRefKey));
     }
 
     if (affectedDocs.size === 0) {

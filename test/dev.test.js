@@ -326,3 +326,79 @@ X --> Y
     await session.close();
   }
 });
+
+test("dev scopes short reference invalidation by block type", async () => {
+  const rootDir = await createWorkspace();
+  const { logger, stderr } = createTestLogger();
+
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/diagram.md",
+    `<!-- mermaid:block customer.shared -->
+\`\`\`mermaid
+flowchart TD
+Diagram --> Done
+\`\`\`
+<!-- /mermaid:block -->
+`,
+  );
+  await writeWorkspaceFile(
+    rootDir,
+    "shared/content.md",
+    `<!-- markdown:block customer.shared -->
+Shared Markdown section.
+<!-- /markdown:block -->
+`,
+  );
+  await writeWorkspaceFile(
+    rootDir,
+    "docs/diagram.md",
+    `\`\`\`mermaid-include
+customer.shared
+\`\`\`
+`,
+  );
+  await writeWorkspaceFile(
+    rootDir,
+    "docs/content.md",
+    `\`\`\`markdown-include
+customer.shared
+\`\`\`
+`,
+  );
+
+  const session = await startDevSession({
+    cwd: rootDir,
+    logger,
+  });
+
+  try {
+    const diagramOutputPath = path.join(rootDir, "dist", "diagram.md");
+    const contentOutputPath = path.join(rootDir, "dist", "content.md");
+
+    assert.match(await readFile(diagramOutputPath, "utf8"), /Diagram --> Done/);
+    assert.match(await readFile(contentOutputPath, "utf8"), /Shared Markdown section\./);
+
+    const initialContentStat = await stat(contentOutputPath);
+
+    await sleep(150);
+    await writeWorkspaceFile(
+      rootDir,
+      "shared/diagram-duplicate.md",
+      `<!-- mm:block customer.shared -->
+\`\`\`mermaid
+flowchart TD
+Other --> Path
+\`\`\`
+<!-- /mm:block -->
+`,
+    );
+
+    await waitForCondition(() => stderr.output.includes("Short reference customer.shared is ambiguous"));
+    const failedContentStat = await stat(contentOutputPath);
+    assert.equal(failedContentStat.mtimeMs, initialContentStat.mtimeMs);
+    assert.match(await readFile(contentOutputPath, "utf8"), /Shared Markdown section\./);
+  } finally {
+    await session.close();
+  }
+});

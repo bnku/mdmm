@@ -16,6 +16,6 @@ escalator = Head of Operations
 
 Templated diagram include via explicit path with arguments:
 
-```mermaid-include
+```mm-include
 ../shared/customer-templates.md#template.customer-overview owner="Customer Success" reviewer=Compliance escalator="COO"
 ```
